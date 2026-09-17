@@ -13,7 +13,6 @@ export default function LoginPage() {
   const [nim, setNim] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
-  const supabase = createClient();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,6 +31,7 @@ export default function LoginPage() {
       password === "komdis12345";
 
     try {
+      const supabase = createClient();
       const { error } = await supabase.auth.signInWithPassword({
         email: authEmail,
         password,

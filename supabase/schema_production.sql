@@ -127,8 +127,8 @@ ON CONFLICT (date) DO NOTHING;
 DO $$
 DECLARE
   v_admin_uid UUID := gen_random_uuid();
-  v_admin_nim TEXT := 'admin';          -- << Ganti dengan NIM Anda jika mau
-  v_admin_pass TEXT := 'admin12345';    -- << Ganti dengan Password Anda jika mau
+  v_admin_nim TEXT := '25120030';          -- << Ganti dengan NIM Anda jika mau
+  v_admin_pass TEXT := '123Zamzami';    -- << Ganti dengan Password Anda jika mau
   v_admin_name TEXT := 'Super Admin';
   v_admin_email TEXT;
 BEGIN
