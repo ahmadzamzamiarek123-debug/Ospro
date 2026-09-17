@@ -123,53 +123,71 @@ VALUES
 ON CONFLICT (date) DO NOTHING;
 
 -- 9. INITIAL SEED: 1 AKUN SUPER ADMIN
--- Silakan ganti nilai 'admin' dan 'admin12345' jika ingin NIM dan password pribadi Anda:
 DO $$
 DECLARE
-  v_admin_uid UUID := gen_random_uuid();
-  v_admin_nim TEXT := '25120030';          -- << Ganti dengan NIM Anda jika mau
-  v_admin_pass TEXT := '123Zamzami';    -- << Ganti dengan Password Anda jika mau
+  v_admin_uid UUID;
+  v_admin_nim TEXT := '25120030';          -- << NIM Super Admin
+  v_admin_pass TEXT := '123Zamzami';    -- << Password Super Admin
   v_admin_name TEXT := 'Super Admin';
   v_admin_email TEXT;
 BEGIN
   v_admin_email := v_admin_nim || '@kedis.local';
 
-  -- Buat user di auth.users Supabase
-  INSERT INTO auth.users (
-    instance_id,
-    id,
-    aud,
-    role,
-    email,
-    encrypted_password,
-    email_confirmed_at,
-    raw_app_meta_data,
-    raw_user_meta_data,
-    created_at,
-    updated_at,
-    confirmation_token,
-    recovery_token
-  ) VALUES (
-    '00000000-0000-0000-0000-000000000000',
-    v_admin_uid,
-    'authenticated',
-    'authenticated',
-    v_admin_email,
-    crypt(v_admin_pass, gen_salt('bf')),
-    NOW(),
-    '{"provider":"email","providers":["email"]}',
-    jsonb_build_object('name', v_admin_name, 'nim', v_admin_nim, 'role', 'admin'),
-    NOW(),
-    NOW(),
-    '',
-    ''
-  )
-  ON CONFLICT (email) DO NOTHING;
+  -- Cek apakah user sudah ada di auth.users (mencegah error 42P10 karena Supabase tidak memakai constraint tunggal email)
+  SELECT id INTO v_admin_uid FROM auth.users WHERE email = v_admin_email LIMIT 1;
+
+  IF v_admin_uid IS NULL THEN
+    v_admin_uid := gen_random_uuid();
+
+    -- Buat user di auth.users Supabase
+    INSERT INTO auth.users (
+      instance_id,
+      id,
+      aud,
+      role,
+      email,
+      encrypted_password,
+      email_confirmed_at,
+      raw_app_meta_data,
+      raw_user_meta_data,
+      created_at,
+      updated_at,
+      confirmation_token,
+      recovery_token
+    ) VALUES (
+      '00000000-0000-0000-0000-000000000000',
+      v_admin_uid,
+      'authenticated',
+      'authenticated',
+      v_admin_email,
+      crypt(v_admin_pass, gen_salt('bf')),
+      NOW(),
+      '{"provider":"email","providers":["email"]}',
+      jsonb_build_object('name', v_admin_name, 'nim', v_admin_nim, 'role', 'admin'),
+      NOW(),
+      NOW(),
+      '',
+      ''
+    );
+  ELSE
+    -- Jika user sudah ada, perbarui password dan metadatanya
+    UPDATE auth.users 
+    SET 
+      encrypted_password = crypt(v_admin_pass, gen_salt('bf')),
+      raw_user_meta_data = jsonb_build_object('name', v_admin_name, 'nim', v_admin_nim, 'role', 'admin'),
+      updated_at = NOW()
+    WHERE id = v_admin_uid;
+  END IF;
 
   -- Pastikan terdaftar sebagai admin di public.users
   INSERT INTO public.users (id, nim, email, name, role)
   VALUES (v_admin_uid, v_admin_nim, v_admin_email, v_admin_name, 'admin')
-  ON CONFLICT (id) DO UPDATE SET role = 'admin', nim = EXCLUDED.nim;
+  ON CONFLICT (id) DO UPDATE SET 
+    role = 'admin', 
+    nim = EXCLUDED.nim,
+    email = EXCLUDED.email,
+    name = EXCLUDED.name;
 
   RAISE NOTICE 'Selesai! Akun Super Admin siap digunakan dengan NIM: %', v_admin_nim;
 END $$;
+
