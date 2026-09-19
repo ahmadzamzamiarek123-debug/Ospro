@@ -19,12 +19,27 @@ export default function LoginPage() {
     setIsLoading(true);
 
     const cleanNim = nim.trim().toLowerCase();
-    const authEmail = cleanNim.includes("@")
+    let authEmail = cleanNim.includes("@")
       ? cleanNim
       : `${cleanNim}@kedis.local`;
 
     try {
       const supabase = createClient();
+
+      // Cari email resmi berdasarkan NIM di tabel public.users
+      try {
+        const { data: userProfile } = await supabase
+          .from("users")
+          .select("email")
+          .eq("nim", cleanNim)
+          .single();
+        if (userProfile?.email) {
+          authEmail = userProfile.email;
+        }
+      } catch {
+        // gunakan authEmail default
+      }
+
       const { error } = await supabase.auth.signInWithPassword({
         email: authEmail,
         password,
