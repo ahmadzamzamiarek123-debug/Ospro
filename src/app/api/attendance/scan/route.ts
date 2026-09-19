@@ -14,16 +14,22 @@ export async function POST(request: Request) {
       )
     }
 
-    // 1. Verifikasi tanda tangan barcode
-    const verification = verifyTicketToken(token)
-    if (!verification.valid || !verification.nim) {
-      return NextResponse.json(
-        { error: verification.error || "Barcode tidak sah atau telah dimodifikasi." },
-        { status: 400 }
-      )
+    // 1. Verifikasi tanda tangan barcode atau NIM manual
+    let nim = ""
+    if (token.startsWith("KEDIS-TICKET:v1:")) {
+      const verification = verifyTicketToken(token)
+      if (!verification.valid || !verification.nim) {
+        return NextResponse.json(
+          { error: verification.error || "Barcode tidak sah atau telah dimodifikasi." },
+          { status: 400 }
+        )
+      }
+      nim = verification.nim.trim().toLowerCase()
+    } else {
+      // Input manual NIM langsung dari form scanner darurat
+      nim = token.trim().toLowerCase()
     }
 
-    const nim = verification.nim.trim().toLowerCase()
     const supabase = createAdminClient()
 
     // 2. Tentukan Sesi Aktif
