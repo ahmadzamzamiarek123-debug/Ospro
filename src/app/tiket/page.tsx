@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Member } from "@/types/database"
 import { generateTicketToken } from "@/lib/ticketToken"
@@ -8,15 +8,35 @@ import { getMentorForKelompok } from "@/lib/mentors"
 import { QRCodeSVG } from "qrcode.react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { ArrowLeft, Printer, MessageCircle, RotateCcw } from "lucide-react"
+import { Printer, MessageCircle, RotateCcw, RotateCw } from "lucide-react"
 import { toast } from "sonner"
-import Link from "next/link"
+
+const ALL_KELOMPOK = [
+  "Kelompok 1",
+  "Kelompok 2",
+  "Kelompok 3",
+  "Kelompok 4",
+  "Kelompok 5"
+]
 
 export default function TicketClaimPage() {
   const [nim, setNim] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [isSorting, setIsSorting] = useState(false)
+  const [displayedGroupIndex, setDisplayedGroupIndex] = useState(0)
   const [member, setMember] = useState<Member | null>(null)
   const [ticketToken, setTicketToken] = useState<string>("")
+
+  // Animasi singkat acak kelompok (1.2 detik)
+  useEffect(() => {
+    let interval: NodeJS.Timeout
+    if (isSorting) {
+      interval = setInterval(() => {
+        setDisplayedGroupIndex((prev) => (prev + 1) % ALL_KELOMPOK.length)
+      }, 70)
+    }
+    return () => clearInterval(interval)
+  }, [isSorting])
 
   const handleClaim = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -42,13 +62,19 @@ export default function TicketClaimPage() {
         return
       }
 
-      setMember(data)
-      const token = generateTicketToken(data.nim)
-      setTicketToken(token)
+      // Animasi acak kelompok singkat 1.2 detik
+      setIsSorting(true)
+      setTimeout(() => {
+        setIsSorting(false)
+        setMember(data)
+        const token = generateTicketToken(data.nim)
+        setTicketToken(token)
+        setIsLoading(false)
+      }, 1200)
     } catch {
       toast.error("Koneksi bermasalah.")
-    } finally {
       setIsLoading(false)
+      setIsSorting(false)
     }
   }
 
@@ -60,25 +86,24 @@ export default function TicketClaimPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col justify-between p-4 sm:p-6 print:p-0 print:bg-white">
-      {/* Top Bar */}
+      {/* Top Bar - Terisolasi tanpa link keluar ke Beranda */}
       <header className="w-full max-w-sm mx-auto flex items-center justify-between pb-6 print:hidden">
-        <Link
-          href="/"
-          className="inline-flex items-center text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors"
-        >
-          <ArrowLeft className="h-3.5 w-3.5 mr-1" /> Beranda
-        </Link>
-        <span className="text-xs font-medium text-slate-400">OSPRO 2026</span>
+        <div className="flex items-center gap-2">
+          <span className="h-2 w-2 rounded-full bg-slate-900" />
+          <span className="text-xs font-bold tracking-tight text-slate-900">KEDIS OSPRO</span>
+        </div>
+        <span className="text-xs font-mono text-slate-400">2026</span>
       </header>
 
       {/* Main Content */}
       <main className="w-full max-w-sm mx-auto my-auto">
-        {!member ? (
+        {/* State 1: Form Input */}
+        {!member && !isSorting && (
           <div className="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-7 shadow-xs space-y-6">
             <div className="space-y-1">
               <h1 className="text-lg font-bold text-slate-900">Tiket Peserta</h1>
               <p className="text-xs text-slate-500">
-                Masukkan NIM untuk mendapatkan barcode presensi dan kelompok.
+                Masukkan NIM untuk melihat kelompok dan barcode presensi.
               </p>
             </div>
 
@@ -107,9 +132,30 @@ export default function TicketClaimPage() {
               </Button>
             </form>
           </div>
-        ) : (
+        )}
+
+        {/* State 2: Animasi Singkat & Minimalis (1.2 detik) */}
+        {isSorting && (
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-8 shadow-xs text-center space-y-4 animate-in fade-in duration-150">
+            <div className="inline-flex items-center justify-center h-10 w-10 rounded-full bg-slate-100 text-slate-700 mx-auto">
+              <RotateCw className="h-5 w-5 animate-spin text-slate-800" />
+            </div>
+            <div className="space-y-1">
+              <p className="text-[11px] font-mono text-slate-400 uppercase tracking-widest">
+                Menentukan Kelompok...
+              </p>
+              <div className="h-9 flex items-center justify-center">
+                <span className="text-xl font-black font-mono text-slate-900 tracking-tight">
+                  {ALL_KELOMPOK[displayedGroupIndex]}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* State 3: Hasil Tiket & Barcode */}
+        {member && !isSorting && (
           <div className="space-y-4 animate-in fade-in duration-200">
-            {/* Clean Ticket Card */}
             <div 
               id="ticket-card"
               className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-5 print:border-none print:shadow-none print:p-4"
