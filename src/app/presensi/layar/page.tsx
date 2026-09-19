@@ -257,6 +257,12 @@ export default function PresensiLayarPage() {
                     level="H"
                     includeMargin={false}
                     className="w-[220px] h-[220px]"
+                    imageSettings={{
+                      src: "/logo.png",
+                      height: 44,
+                      width: 44,
+                      excavate: true,
+                    }}
                   />
                 ) : (
                   <div className="w-[220px] h-[220px] flex items-center justify-center text-slate-300">

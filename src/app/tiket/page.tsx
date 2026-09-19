@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Member } from "@/types/database"
 import { generateTicketToken } from "@/lib/ticketToken"
@@ -8,8 +8,9 @@ import { getMentorForKelompok } from "@/lib/mentors"
 import { QRCodeSVG } from "qrcode.react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Printer, MessageCircle, RotateCcw, RotateCw } from "lucide-react"
+import { Download, MessageCircle, RotateCcw, RotateCw, Maximize2, X } from "lucide-react"
 import { toast } from "sonner"
+import { toJpeg } from "html-to-image"
 
 const ALL_KELOMPOK = [
   "Kelompok 1",
@@ -26,6 +27,31 @@ export default function TicketClaimPage() {
   const [displayedGroupIndex, setDisplayedGroupIndex] = useState(0)
   const [member, setMember] = useState<Member | null>(null)
   const [ticketToken, setTicketToken] = useState<string>("")
+  const [isZoomed, setIsZoomed] = useState(false)
+  const [isDownloading, setIsDownloading] = useState(false)
+  const [logoDataUrl, setLogoDataUrl] = useState<string>("/logo.png")
+
+  const cardRef = useRef<HTMLDivElement>(null)
+
+  // Konversi logo menjadi base64 data URL agar kompatibel 100% dengan ekspor gambar JPG
+  useEffect(() => {
+    const loadLogo = async () => {
+      try {
+        const res = await fetch("/logo.png")
+        const blob = await res.blob()
+        const reader = new FileReader()
+        reader.onloadend = () => {
+          if (typeof reader.result === "string") {
+            setLogoDataUrl(reader.result)
+          }
+        }
+        reader.readAsDataURL(blob)
+      } catch {
+        // Fallback default path jika gagal fetch
+      }
+    }
+    loadLogo()
+  }, [])
 
   // Animasi singkat acak kelompok (1.2 detik)
   useEffect(() => {
@@ -37,6 +63,25 @@ export default function TicketClaimPage() {
     }
     return () => clearInterval(interval)
   }, [isSorting])
+
+  // ESC key listener & body scroll lock untuk modal zoom
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsZoomed(false)
+      }
+    }
+    if (isZoomed) {
+      window.addEventListener("keydown", handleKeyDown)
+      document.body.style.overflow = "hidden"
+    } else {
+      document.body.style.overflow = ""
+    }
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown)
+      document.body.style.overflow = ""
+    }
+  }, [isZoomed])
 
   const handleClaim = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -82,14 +127,51 @@ export default function TicketClaimPage() {
     setMember(null)
     setNim("")
     setTicketToken("")
+    setIsZoomed(false)
+  }
+
+  // Fungsi Download Kartu Tiket Saja sebagai JPG
+  const handleDownloadJpg = async () => {
+    if (!cardRef.current || !member) return
+
+    setIsDownloading(true)
+    try {
+      const dataUrl = await toJpeg(cardRef.current, {
+        quality: 0.95,
+        backgroundColor: "#ffffff",
+        pixelRatio: 2,
+        filter: (node) => {
+          // Abaikan petunjuk klik dari hasil JPG
+          if (node instanceof HTMLElement && node.dataset.hideDownload === "true") {
+            return false
+          }
+          return true
+        },
+      })
+
+      const filename = `Tiket-OSI-2026-${member.nim}.jpg`
+      const link = document.createElement("a")
+      link.download = filename
+      link.href = dataUrl
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+
+      toast.success("Tiket berhasil diunduh sebagai JPG!")
+    } catch (err) {
+      console.error("Gagal mendownload tiket:", err)
+      toast.error("Gagal mengunduh gambar tiket. Silakan coba lagi.")
+    } finally {
+      setIsDownloading(false)
+    }
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col justify-between p-4 sm:p-6 print:p-0 print:bg-white">
-      {/* Top Bar - Terisolasi tanpa link keluar ke Beranda */}
-      <header className="w-full max-w-sm mx-auto flex items-center justify-between pb-6 print:hidden">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col justify-between p-4 sm:p-6">
+      {/* Top Bar */}
+      <header className="w-full max-w-sm mx-auto flex items-center justify-between pb-6">
         <div className="flex items-center gap-2">
-          <img src="/logo.png" alt="Logo OSI" className="h-7 w-7 object-contain" />
+          <img src={logoDataUrl} alt="Logo OSI" className="h-7 w-7 object-contain" />
           <span className="text-sm font-black tracking-tight text-slate-900">OSI 2026</span>
         </div>
       </header>
@@ -155,16 +237,21 @@ export default function TicketClaimPage() {
         {/* State 3: Hasil Tiket & Barcode */}
         {member && !isSorting && (
           <div className="space-y-4 animate-in fade-in duration-200">
+            {/* KARTU TIKET PESERTA - Hanya bagian ini yang diunduh ke JPG */}
             <div 
               id="ticket-card"
-              className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-5 print:border-none print:shadow-none print:p-4"
+              ref={cardRef}
+              className="bg-white border border-slate-200 rounded-2xl p-6 shadow-xs space-y-5"
             >
               {/* Header Info */}
               <div className="flex items-start justify-between border-b border-slate-100 pb-4">
                 <div className="space-y-0.5">
-                  <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest block">
-                    OSI HIMASI 2026
-                  </span>
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <img src={logoDataUrl} alt="OSI" className="h-4 w-4 object-contain" />
+                    <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest block">
+                      OSI HIMASI 2026
+                    </span>
+                  </div>
                   <h2 className="text-base font-bold text-slate-900 leading-tight">
                     {member.name}
                   </h2>
@@ -179,17 +266,39 @@ export default function TicketClaimPage() {
                 </div>
               </div>
 
-              {/* QR Code Container */}
+              {/* QR Code Container dengan Logo OSI di Tengah */}
               <div className="flex flex-col items-center justify-center py-2">
-                <div className="p-3 bg-white border border-slate-200 rounded-xl">
+                <div 
+                  onClick={() => setIsZoomed(true)}
+                  title="Klik untuk memperbesar barcode"
+                  className="p-3 bg-white border border-slate-200 rounded-xl cursor-pointer group transition-all duration-200 hover:scale-105 hover:border-slate-300 hover:shadow-sm"
+                >
                   <QRCodeSVG
                     value={ticketToken}
                     size={180}
                     level="H"
                     includeMargin={false}
+                    imageSettings={{
+                      src: logoDataUrl,
+                      height: 38,
+                      width: 38,
+                      excavate: true,
+                    }}
                   />
                 </div>
-                <span className="text-[10px] font-mono text-slate-400 mt-2">
+
+                {/* Petunjuk Klik (disembunyikan saat diekspor ke JPG) */}
+                <button
+                  type="button"
+                  onClick={() => setIsZoomed(true)}
+                  data-hide-download="true"
+                  className="flex items-center gap-1 text-[10px] font-mono text-slate-400 mt-2 hover:text-slate-800 transition-colors"
+                >
+                  <Maximize2 className="h-3 w-3" />
+                  <span>Ketuk barcode untuk perbesar</span>
+                </button>
+
+                <span className="text-[10px] font-mono text-slate-400 mt-0.5">
                   Berlaku untuk Sesi 1 - 4
                 </span>
               </div>
@@ -205,6 +314,11 @@ export default function TicketClaimPage() {
                     <div>
                       <span className="text-[10px] text-slate-400 block">Pendamping</span>
                       <span className="font-semibold text-slate-800">{mentorName}</span>
+                      {mentorWa && (
+                        <span className="text-[10px] font-mono text-slate-500 block">
+                          {mentorWa}
+                        </span>
+                      )}
                     </div>
 
                     {mentorWa && (
@@ -212,7 +326,7 @@ export default function TicketClaimPage() {
                         href={`https://wa.me/${mentorWa.replace(/[^0-9]/g, "")}?text=Halo%20Kak,%20saya%20${encodeURIComponent(member.name)}%20(${member.nim})`}
                         target="_blank"
                         rel="noreferrer"
-                        className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 hover:text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200/60 print:hidden transition-colors"
+                        className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 hover:text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200/60 transition-colors"
                       >
                         <MessageCircle className="h-3 w-3" /> WA
                       </a>
@@ -222,18 +336,30 @@ export default function TicketClaimPage() {
               })()}
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex gap-2 print:hidden">
+            {/* Action Buttons: Download JPG & Ganti NIM */}
+            <div className="flex gap-2">
               <Button
-                onClick={() => window.print()}
-                className="flex-1 h-10 rounded-xl bg-slate-900 hover:bg-black text-white font-semibold text-xs flex items-center justify-center gap-1.5"
+                onClick={handleDownloadJpg}
+                disabled={isDownloading}
+                className="flex-1 h-11 rounded-xl bg-slate-900 hover:bg-black text-white font-semibold text-xs flex items-center justify-center gap-2 shadow-xs transition-all active:scale-[0.98]"
               >
-                <Printer className="h-3.5 w-3.5" /> Cetak / Simpan
+                {isDownloading ? (
+                  <>
+                    <RotateCw className="h-3.5 w-3.5 animate-spin" />
+                    <span>Menyiapkan JPG...</span>
+                  </>
+                ) : (
+                  <>
+                    <Download className="h-3.5 w-3.5" />
+                    <span>Download Tiket (JPG)</span>
+                  </>
+                )}
               </Button>
               <Button
                 variant="outline"
                 onClick={handleReset}
-                className="h-10 px-4 rounded-xl border-slate-200 text-slate-600 hover:bg-slate-100 text-xs font-semibold"
+                disabled={isDownloading}
+                className="h-11 px-4 rounded-xl border-slate-200 text-slate-600 hover:bg-slate-100 text-xs font-semibold"
               >
                 <RotateCcw className="h-3.5 w-3.5 mr-1" /> Ganti NIM
               </Button>
@@ -243,11 +369,77 @@ export default function TicketClaimPage() {
       </main>
 
       {/* Footer */}
-      <footer className="w-full max-w-sm mx-auto text-center py-4 print:hidden">
+      <footer className="w-full max-w-sm mx-auto text-center py-4">
         <p className="text-[10px] text-slate-400 font-mono">
           OSI • HIMASI 2026
         </p>
       </footer>
+
+      {/* Modal Perbesar Barcode (Fullscreen Lightbox) */}
+      {isZoomed && member && (
+        <div
+          className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200"
+          onClick={() => setIsZoomed(false)}
+        >
+          <div
+            className="bg-white rounded-3xl p-6 sm:p-7 max-w-sm w-full text-center space-y-4 shadow-2xl animate-in zoom-in-95 duration-200 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Tombol Tutup X */}
+            <button
+              type="button"
+              onClick={() => setIsZoomed(false)}
+              className="absolute top-4 right-4 h-8 w-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 flex items-center justify-center transition-colors"
+              aria-label="Tutup"
+            >
+              <X className="h-4 w-4" />
+            </button>
+
+            {/* Header Modal */}
+            <div className="space-y-1 pt-1">
+              <div className="flex items-center justify-center gap-1.5">
+                <img src={logoDataUrl} alt="OSI" className="h-5 w-5 object-contain" />
+                <span className="text-xs font-black tracking-tight text-slate-900">OSI 2026</span>
+              </div>
+              <h3 className="text-base font-bold text-slate-900 leading-tight">
+                {member.name}
+              </h3>
+              <p className="text-xs font-mono text-slate-500">
+                {member.nim} • <span className="font-bold text-slate-800">{member.kelompok || "Kelompok 1"}</span>
+              </p>
+            </div>
+
+            {/* Barcode Besar dengan Logo OSI di Tengah */}
+            <div className="p-4 bg-white border border-slate-200 rounded-2xl inline-block shadow-sm">
+              <QRCodeSVG
+                value={ticketToken}
+                size={260}
+                level="H"
+                includeMargin={false}
+                imageSettings={{
+                  src: logoDataUrl,
+                  height: 52,
+                  width: 52,
+                  excavate: true,
+                }}
+              />
+            </div>
+
+            <div className="space-y-3 pt-1">
+              <p className="text-xs text-slate-500 font-medium">
+                Arahkan barcode ini ke scanner panitia
+              </p>
+              <Button
+                onClick={() => setIsZoomed(false)}
+                variant="outline"
+                className="w-full h-10 rounded-xl border-slate-200 text-xs font-semibold"
+              >
+                Tutup
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
