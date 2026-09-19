@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Member } from "@/types/database"
 import { generateTicketToken } from "@/lib/ticketToken"
-import { getMentorForKelompok } from "@/lib/mentors"
+import { getMentorForKelompok, formatWaNumber } from "@/lib/mentors"
 import { QRCodeSVG } from "qrcode.react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -323,7 +323,7 @@ export default function TicketClaimPage() {
 
                     {mentorWa && (
                       <a
-                        href={`https://wa.me/${mentorWa.replace(/[^0-9]/g, "")}?text=Halo%20Kak,%20saya%20${encodeURIComponent(member.name)}%20(${member.nim})`}
+                        href={`https://wa.me/${formatWaNumber(mentorWa)}?text=Halo%20Kak,%20saya%20${encodeURIComponent(member.name)}%20(${member.nim})`}
                         target="_blank"
                         rel="noreferrer"
                         className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 hover:text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200/60 transition-colors"

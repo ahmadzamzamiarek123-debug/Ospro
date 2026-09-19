@@ -48,3 +48,16 @@ export function getMentorForKelompok(kelompokName?: string | null): MentorInfo {
 
   return { pendamping: "Sie Acara / Komdis", no_wa_pendamping: "" }
 }
+
+/**
+ * Format nomor telepon ke format internasional WhatsApp (contoh: 0858... -> 62858...)
+ */
+export function formatWaNumber(phone?: string | null): string {
+  if (!phone) return ""
+  let cleaned = phone.replace(/[^0-9]/g, "")
+  if (cleaned.startsWith("0")) {
+    cleaned = "62" + cleaned.slice(1)
+  }
+  return cleaned
+}
+
