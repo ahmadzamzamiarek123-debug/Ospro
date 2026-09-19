@@ -336,7 +336,7 @@ export default function MobileScannerPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col justify-between p-4 max-w-md mx-auto select-none">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col justify-between p-4 max-w-md mx-auto select-none">
       <input
         type="file"
         ref={fileInputRef}
@@ -350,13 +350,14 @@ export default function MobileScannerPage() {
         <div className="flex items-center gap-2">
           <Link
             href="/dashboard"
-            className="text-xs font-semibold text-slate-400 hover:text-white inline-flex items-center gap-1 transition-colors"
+            className="text-xs font-semibold text-slate-400 hover:text-slate-900 inline-flex items-center gap-1 transition-colors"
           >
             <ArrowLeft className="h-4 w-4" />
           </Link>
           <div className="flex items-center gap-1.5 pl-1">
-            <img src="/logo.png" alt="OSI" className="h-5 w-5 object-contain" />
-            <span className="text-xs font-bold text-white tracking-tight">OSI 2026</span>
+            <img src="/logo.png" alt="OSI" className="h-6 w-6 object-contain" />
+            <span className="text-sm font-black text-slate-900 tracking-tight">OSI 2026</span>
+            <span className="text-[11px] font-medium text-slate-400">• Scanner</span>
           </div>
         </div>
 
@@ -364,7 +365,7 @@ export default function MobileScannerPage() {
           {availableCameras.length > 1 && (
             <button
               onClick={handleSwitchCamera}
-              className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-900 transition-colors"
+              className="p-2 text-slate-500 hover:text-slate-900 rounded-xl hover:bg-slate-200/70 transition-colors"
               title="Ganti Kamera"
             >
               <SwitchCamera className="h-4 w-4" />
@@ -373,15 +374,15 @@ export default function MobileScannerPage() {
 
           <button
             onClick={() => setSoundEnabled(!soundEnabled)}
-            className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-900 transition-colors"
+            className="p-2 text-slate-500 hover:text-slate-900 rounded-xl hover:bg-slate-200/70 transition-colors"
             title="Suara"
           >
-            {soundEnabled ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4 text-slate-600" />}
+            {soundEnabled ? <Volume2 className="h-4 w-4 text-slate-700" /> : <VolumeX className="h-4 w-4 text-slate-400" />}
           </button>
 
           <button
             onClick={() => setSessionNumber((prev) => (prev % 4) + 1)}
-            className="text-xs font-mono font-bold px-2.5 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 text-slate-200 border border-slate-800 transition-colors"
+            className="text-xs font-mono font-bold px-2.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 shadow-2xs transition-colors"
           >
             Sesi {sessionNumber}
           </button>
@@ -391,7 +392,7 @@ export default function MobileScannerPage() {
       {/* Main Viewfinder */}
       <main className="space-y-4 my-auto">
         {/* Camera Box */}
-        <div className="relative rounded-2xl overflow-hidden bg-black border border-slate-800 aspect-square flex items-center justify-center">
+        <div className="relative rounded-2xl overflow-hidden bg-slate-900 border border-slate-200 shadow-sm aspect-square flex items-center justify-center">
           <div id="reader" className="w-full h-full object-cover" />
 
           {/* Minimalist reticle viewfinder corners */}
@@ -409,29 +410,32 @@ export default function MobileScannerPage() {
 
           {/* Loading */}
           {isStartingCamera && (
-            <div className="absolute inset-0 bg-slate-950/80 flex flex-col items-center justify-center gap-2 z-10">
-              <RotateCw className="h-6 w-6 text-slate-400 animate-spin" />
-              <span className="text-xs text-slate-400 font-medium">Membuka kamera...</span>
+            <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-xs flex flex-col items-center justify-center gap-2 z-10">
+              <RotateCw className="h-6 w-6 text-slate-300 animate-spin" />
+              <span className="text-xs text-slate-300 font-medium">Membuka kamera...</span>
             </div>
           )}
 
           {/* Error / Off State */}
           {!isScanning && !isStartingCamera && (
-            <div className="absolute inset-0 bg-slate-950 flex flex-col items-center justify-center p-6 text-center gap-3 z-10">
-              <span className="text-xs text-slate-400">{errorMessage || "Kamera tidak aktif"}</span>
+            <div className="absolute inset-0 bg-white flex flex-col items-center justify-center p-6 text-center gap-3 z-10">
+              <div className="h-12 w-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-500">
+                <Camera className="h-6 w-6" />
+              </div>
+              <span className="text-xs text-slate-500 font-medium">{errorMessage || "Kamera belum aktif"}</span>
               <div className="flex gap-2">
                 <Button 
                   onClick={() => startScanner()} 
                   size="sm" 
-                  className="h-9 px-3 rounded-xl bg-white hover:bg-slate-200 text-slate-950 font-semibold text-xs"
+                  className="h-10 px-4 rounded-xl bg-slate-900 hover:bg-black text-white font-semibold text-xs shadow-xs"
                 >
-                  <Camera className="h-3.5 w-3.5 mr-1" /> Coba Kamera
+                  <Camera className="h-3.5 w-3.5 mr-1" /> Aktifkan Kamera
                 </Button>
                 <Button 
                   onClick={() => fileInputRef.current?.click()} 
                   size="sm" 
                   variant="outline"
-                  className="h-9 px-3 rounded-xl border-slate-800 bg-slate-900 text-slate-200 text-xs font-semibold"
+                  className="h-10 px-3.5 rounded-xl border-slate-200 bg-white hover:bg-slate-100 text-slate-700 text-xs font-semibold"
                 >
                   <ImageIcon className="h-3.5 w-3.5 mr-1" /> Pilih Foto
                 </Button>
@@ -444,39 +448,39 @@ export default function MobileScannerPage() {
         {scanResult && (
           <div className="animate-in fade-in duration-150">
             {scanResult.status === "success" && (
-              <div className="p-3 rounded-xl bg-emerald-950/40 border border-emerald-800/50 flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2 overflow-hidden">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+              <div className="p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200/80 flex items-center justify-between text-xs shadow-xs">
+                <div className="flex items-center gap-2.5 overflow-hidden">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
                   <div className="truncate">
-                    <span className="font-bold text-white">{scanResult.name}</span>
-                    <span className="text-slate-400 ml-1 font-mono text-[11px]">({scanResult.nim})</span>
+                    <span className="font-bold text-slate-900">{scanResult.name}</span>
+                    <span className="text-slate-500 ml-1.5 font-mono text-[11px]">({scanResult.nim})</span>
                   </div>
                 </div>
-                <span className="text-emerald-400 font-semibold font-mono text-[11px] shrink-0 ml-2">
+                <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md font-bold font-mono text-[11px] shrink-0 ml-2">
                   {scanResult.kelompok}
                 </span>
               </div>
             )}
 
             {scanResult.status === "warning" && (
-              <div className="p-3 rounded-xl bg-amber-950/40 border border-amber-800/50 flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2 overflow-hidden">
-                  <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0" />
+              <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200/80 flex items-center justify-between text-xs shadow-xs">
+                <div className="flex items-center gap-2.5 overflow-hidden">
+                  <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
                   <div className="truncate">
-                    <span className="font-bold text-white">{scanResult.name}</span>
-                    <span className="text-slate-400 ml-1 font-mono text-[11px]">({scanResult.nim})</span>
+                    <span className="font-bold text-slate-900">{scanResult.name}</span>
+                    <span className="text-slate-500 ml-1.5 font-mono text-[11px]">({scanResult.nim})</span>
                   </div>
                 </div>
-                <span className="text-amber-400 font-mono text-[11px] shrink-0 ml-2">
+                <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded-md font-bold font-mono text-[11px] shrink-0 ml-2">
                   Sudah Hadir
                 </span>
               </div>
             )}
 
             {scanResult.status === "error" && (
-              <div className="p-3 rounded-xl bg-red-950/40 border border-red-800/50 flex items-center gap-2 text-xs text-red-300">
-                <XCircle className="h-4 w-4 text-red-400 shrink-0" />
-                <span>{scanResult.message}</span>
+              <div className="p-3.5 rounded-2xl bg-red-50 border border-red-200/80 flex items-center gap-2.5 text-xs text-red-700 shadow-xs">
+                <XCircle className="h-5 w-5 text-red-500 shrink-0" />
+                <span className="font-medium">{scanResult.message}</span>
               </div>
             )}
           </div>
@@ -486,15 +490,15 @@ export default function MobileScannerPage() {
         <form onSubmit={handleManualSubmit} className="flex gap-2">
           <Input
             type="text"
-            placeholder="Ketik NIM jika barcode terkendala..."
+            placeholder="Ketik NIM manual jika barcode terkendala..."
             value={manualNim}
             onChange={(e) => setManualNim(e.target.value)}
-            className="h-10 bg-slate-900 border-slate-800 text-white rounded-xl text-xs font-mono placeholder:text-slate-600 focus-visible:ring-slate-700"
+            className="h-11 bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 rounded-xl text-xs font-mono focus-visible:ring-slate-300 shadow-xs"
           />
           <Button
             type="submit"
             disabled={isManualLoading}
-            className="h-10 px-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold shrink-0"
+            className="h-11 px-4 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-semibold shrink-0 shadow-xs transition-all"
           >
             {isManualLoading ? "..." : "Absen"}
           </Button>
@@ -502,7 +506,7 @@ export default function MobileScannerPage() {
             type="button"
             onClick={() => fileInputRef.current?.click()}
             variant="outline"
-            className="h-10 px-3 rounded-xl border-slate-800 bg-slate-900 text-slate-400 hover:text-white text-xs shrink-0"
+            className="h-11 px-3.5 rounded-xl border-slate-200 bg-white text-slate-600 hover:bg-slate-100 hover:text-slate-900 text-xs shrink-0 shadow-xs"
             title="Scan dari galeri"
           >
             <ImageIcon className="h-4 w-4" />
@@ -510,26 +514,32 @@ export default function MobileScannerPage() {
         </form>
 
         {/* Mini Status & Recent List */}
-        <div className="pt-1 flex items-center justify-between text-xs text-slate-500 font-mono">
-          <span>Hadir Sesi Ini</span>
-          <span className="font-bold text-slate-300">{totalScannedToday} Mahasiswa</span>
-        </div>
-
-        {recentScans.length > 0 && (
-          <div className="space-y-1 pt-1 border-t border-slate-900">
-            {recentScans.map((s, idx) => (
-              <div key={idx} className="flex items-center justify-between text-[11px] py-1 text-slate-400">
-                <span className="truncate max-w-[200px]">{s.name} ({s.nim})</span>
-                <span className="font-mono text-[10px] text-slate-600">{s.time}</span>
-              </div>
-            ))}
+        <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs space-y-3">
+          <div className="flex items-center justify-between text-xs text-slate-500">
+            <span className="font-medium">Hadir Sesi {sessionNumber}</span>
+            <span className="font-bold text-slate-900 font-mono text-sm">{totalScannedToday} Mahasiswa</span>
           </div>
-        )}
+
+          {recentScans.length > 0 && (
+            <div className="space-y-1.5 pt-2.5 border-t border-slate-100">
+              {recentScans.map((s, idx) => (
+                <div key={idx} className="flex items-center justify-between text-xs text-slate-600">
+                  <div className="flex items-center gap-1.5 truncate max-w-[220px]">
+                    <span className={`h-1.5 w-1.5 rounded-full ${s.status === "success" ? "bg-emerald-500" : "bg-amber-500"}`} />
+                    <span className="truncate font-medium text-slate-800">{s.name}</span>
+                    <span className="font-mono text-[11px] text-slate-400">({s.nim})</span>
+                  </div>
+                  <span className="font-mono text-[10px] text-slate-400 shrink-0">{s.time}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </main>
 
       {/* Minimal Footer */}
-      <footer className="text-center py-2">
-        <span className="text-[10px] font-mono text-slate-600">Presensi Barcode OSI 2026</span>
+      <footer className="text-center py-3">
+        <span className="text-[10px] font-mono text-slate-400">Presensi Barcode OSI 2026</span>
       </footer>
 
       <style jsx global>{`
