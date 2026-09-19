@@ -6,8 +6,9 @@ import { Member, Session, User } from "@/types/database"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Search, UserCircle, Users, Award, Calendar, LogOut, ShieldCheck } from "lucide-react"
+import { Search, UserCircle, Users, Award, Calendar, LogOut, ShieldCheck, Camera, QrCode, Ticket, ExternalLink } from "lucide-react"
 import { useRouter } from "next/navigation"
+import Link from "next/link"
 import { ViolationSheet } from "@/components/dashboard/violation-sheet"
 import { AddMemberDialog } from "@/components/dashboard/add-member-dialog"
 import { AddOfficerDialog } from "@/components/dashboard/add-officer-dialog"
@@ -125,6 +126,58 @@ export default function DashboardPage() {
           isAction 
           onClick={handleLogout} 
         />
+      </section>
+
+      {/* Quick Action Presensi Modes */}
+      <section className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <Link href="/presensi/scanner" className="block">
+          <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 text-white shadow-sm hover:shadow-md transition-all active:scale-[0.99] border border-slate-700">
+            <div className="flex items-center justify-between mb-2">
+              <div className="h-8 w-8 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center">
+                <Camera className="h-4 w-4" />
+              </div>
+              <span className="text-[9px] font-black uppercase tracking-wider bg-blue-500/30 text-blue-300 px-2 py-0.5 rounded-full">
+                Mode 2 Baru
+              </span>
+            </div>
+            <p className="font-bold text-sm">Scanner Kamera HP</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">Scan tiket/print maba via kamera HP panitia</p>
+          </div>
+        </Link>
+
+        <Link href="/presensi/layar" target="_blank" className="block">
+          <div className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md transition-all active:scale-[0.99]">
+            <div className="flex items-center justify-between mb-2">
+              <div className="h-8 w-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
+                <QrCode className="h-4 w-4" />
+              </div>
+              <span className="text-[9px] font-black uppercase tracking-wider bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">
+                Mode 1
+              </span>
+            </div>
+            <p className="font-bold text-sm text-slate-900 flex items-center gap-1">
+              Layar Operator Laptop <ExternalLink className="h-3 w-3 text-slate-400" />
+            </p>
+            <p className="text-[11px] text-slate-400 mt-0.5">Tampilkan barcode dinamis di meja registrasi</p>
+          </div>
+        </Link>
+
+        <Link href="/tiket" target="_blank" className="block">
+          <div className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md transition-all active:scale-[0.99]">
+            <div className="flex items-center justify-between mb-2">
+              <div className="h-8 w-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                <Ticket className="h-4 w-4" />
+              </div>
+              <span className="text-[9px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full">
+                Khusus TM
+              </span>
+            </div>
+            <p className="font-bold text-sm text-slate-900 flex items-center gap-1">
+              Klaim Tiket Maba <ExternalLink className="h-3 w-3 text-slate-400" />
+            </p>
+            <p className="text-[11px] text-slate-400 mt-0.5">Link disebar ke maba untuk undi kelompok & QR</p>
+          </div>
+        </Link>
       </section>
 
       <Card className="border-none shadow-sm rounded-2xl overflow-hidden bg-white">

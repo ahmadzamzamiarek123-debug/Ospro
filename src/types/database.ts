@@ -18,6 +18,9 @@ export interface Member {
   name: string;
   role: MemberRole;
   kelompok?: string;
+  pendamping?: string;
+  no_wa_pendamping?: string;
+  ticket_claimed_at?: string;
   created_at: string;
 }
 

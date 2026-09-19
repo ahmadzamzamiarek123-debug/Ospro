@@ -53,6 +53,11 @@ export default async function DashboardLayout({
                   Log
                 </Button>
               </Link>
+              <Link href="/presensi/scanner">
+                <Button variant="ghost" size="sm" className="h-8 px-2 sm:px-3 text-xs font-bold text-blue-600 hover:text-blue-700 bg-blue-50/60 hover:bg-blue-100/60 transition-all">
+                  Scanner HP
+                </Button>
+              </Link>
             </div>
           </div>
 

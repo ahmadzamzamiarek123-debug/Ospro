@@ -28,8 +28,15 @@ CREATE TABLE IF NOT EXISTS public.members (
   name TEXT NOT NULL,
   role TEXT CHECK (role IN ('panitia', 'peserta')) NOT NULL DEFAULT 'peserta',
   kelompok TEXT DEFAULT 'Kelompok 1',
+  pendamping TEXT,
+  no_wa_pendamping TEXT,
+  ticket_claimed_at TIMESTAMP WITH TIME ZONE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
+
+ALTER TABLE public.members ADD COLUMN IF NOT EXISTS pendamping TEXT;
+ALTER TABLE public.members ADD COLUMN IF NOT EXISTS no_wa_pendamping TEXT;
+ALTER TABLE public.members ADD COLUMN IF NOT EXISTS ticket_claimed_at TIMESTAMP WITH TIME ZONE;
 
 -- 3. TABEL SESSIONS (Sesi OSPRO 1 s/d 4)
 CREATE TABLE IF NOT EXISTS public.sessions (
