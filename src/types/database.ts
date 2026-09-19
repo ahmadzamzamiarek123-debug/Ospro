@@ -1,7 +1,7 @@
 export type UserRole = 'admin' | 'viewer';
 export type MemberRole = 'panitia' | 'peserta';
 export type ViolationType = 'ringan' | 'sedang' | 'berat' | 'baik';
-export type SessionNumber = 1 | 2 | 3 | 4;
+export type SessionNumber = 1 | 2 | 3;
 
 export interface User {
   id: string;

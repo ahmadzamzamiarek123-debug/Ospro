@@ -381,7 +381,7 @@ export default function MobileScannerPage() {
           </button>
 
           <button
-            onClick={() => setSessionNumber((prev) => (prev % 4) + 1)}
+            onClick={() => setSessionNumber((prev) => (prev % 3) + 1)}
             className="text-xs font-mono font-bold px-2.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 shadow-2xs transition-colors"
           >
             Sesi {sessionNumber}

@@ -231,19 +231,24 @@ export default function PresensiLayarPage() {
 
           {/* Sesi Selector & Actions */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Pilihan Sesi */}
+            {/* Pilihan Sesi (3 Sesi) */}
             <div className="flex items-center bg-slate-100 p-1 rounded-xl">
-              {[1, 2, 3, 4].map((s) => (
+              {[
+                { num: 1, date: "23 Sep" },
+                { num: 2, date: "24 Sep" },
+                { num: 3, date: "25 Sep" }
+              ].map((s) => (
                 <button
-                  key={s}
-                  onClick={() => setSessionNumber(s)}
-                  className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
-                    sessionNumber === s
+                  key={s.num}
+                  onClick={() => setSessionNumber(s.num)}
+                  className={`px-2.5 sm:px-3 py-1 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 ${
+                    sessionNumber === s.num
                       ? "bg-white text-slate-900 shadow-xs"
                       : "text-slate-500 hover:text-slate-900"
                   }`}
                 >
-                  Sesi {s}
+                  <span>Sesi {s.num}</span>
+                  <span className="text-[10px] font-mono text-slate-400 hidden md:inline">({s.date})</span>
                 </button>
               ))}
             </div>
