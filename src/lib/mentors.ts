@@ -6,7 +6,7 @@ export interface MentorInfo {
 export const MENTORS_MAP: Record<string, MentorInfo> = {
   "Kelompok 1": {
     pendamping: "Dhafin Epand Dhia Azka",
-    no_wa_pendamping: "0857-4602-7536"
+    no_wa_pendamping: "0897-9146-099"
   },
   "Kelompok 2": {
     pendamping: "Rubiatul Adwia Ansar",
@@ -18,7 +18,7 @@ export const MENTORS_MAP: Record<string, MentorInfo> = {
   },
   "Kelompok 4": {
     pendamping: "Riski Ramadani",
-    no_wa_pendamping: "0857-4602-7536"
+    no_wa_pendamping: "0859-3103-1500"
   },
   "Kelompok 5": {
     pendamping: "Joannatan Firdaus",
