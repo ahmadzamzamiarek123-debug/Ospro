@@ -89,10 +89,9 @@ export default function TicketClaimPage() {
       {/* Top Bar - Terisolasi tanpa link keluar ke Beranda */}
       <header className="w-full max-w-sm mx-auto flex items-center justify-between pb-6 print:hidden">
         <div className="flex items-center gap-2">
-          <span className="h-2 w-2 rounded-full bg-slate-900" />
-          <span className="text-xs font-bold tracking-tight text-slate-900">KEDIS OSPRO</span>
+          <img src="/logo.png" alt="Logo OSI" className="h-7 w-7 object-contain" />
+          <span className="text-sm font-black tracking-tight text-slate-900">OSI 2026</span>
         </div>
-        <span className="text-xs font-mono text-slate-400">2026</span>
       </header>
 
       {/* Main Content */}
@@ -101,7 +100,7 @@ export default function TicketClaimPage() {
         {!member && !isSorting && (
           <div className="bg-white border border-slate-200/80 rounded-2xl p-6 sm:p-7 shadow-xs space-y-6">
             <div className="space-y-1">
-              <h1 className="text-lg font-bold text-slate-900">Tiket Peserta</h1>
+              <h1 className="text-lg font-bold text-slate-900">Tiket Peserta OSI 2026</h1>
               <p className="text-xs text-slate-500">
                 Masukkan NIM untuk melihat kelompok dan barcode presensi.
               </p>
@@ -164,7 +163,7 @@ export default function TicketClaimPage() {
               <div className="flex items-start justify-between border-b border-slate-100 pb-4">
                 <div className="space-y-0.5">
                   <span className="text-[10px] font-mono text-slate-400 uppercase tracking-widest block">
-                    OSPRO HIMASI 2026
+                    OSI HIMASI 2026
                   </span>
                   <h2 className="text-base font-bold text-slate-900 leading-tight">
                     {member.name}
@@ -246,7 +245,7 @@ export default function TicketClaimPage() {
       {/* Footer */}
       <footer className="w-full max-w-sm mx-auto text-center py-4 print:hidden">
         <p className="text-[10px] text-slate-400 font-mono">
-          KEDIS • HIMASI
+          OSI • HIMASI 2026
         </p>
       </footer>
     </div>

@@ -16,7 +16,7 @@ export async function POST(request: Request) {
 
     // 1. Verifikasi tanda tangan barcode atau NIM manual
     let nim = ""
-    if (token.startsWith("KEDIS-TICKET:v1:")) {
+    if (token.startsWith("OSI-TICKET:v1:") || token.startsWith("KEDIS-TICKET:v1:")) {
       const verification = verifyTicketToken(token)
       if (!verification.valid || !verification.nim) {
         return NextResponse.json(

@@ -77,6 +77,7 @@ export interface MemberWithPoints extends Member {
   };
   has_escalation: boolean;
   is_redo_ospro: boolean;
+  is_redo_osi?: boolean;
 }
 
 export type AttendanceStatus = 'hadir' | 'terlambat' | 'izin' | 'sakit' | 'alpha';

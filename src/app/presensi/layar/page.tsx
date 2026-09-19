@@ -179,8 +179,9 @@ export default function PresensiLayarPage() {
       <nav className="sticky top-0 z-30 w-full border-b bg-white/80 backdrop-blur-md">
         <div className="container max-w-5xl mx-auto h-14 flex items-center justify-between px-4 sm:px-6">
           <div className="flex items-center gap-3 sm:gap-6">
-            <Link href="/dashboard" className="text-xl font-bold tracking-tight">
-              KEDIS<span className="text-primary">.</span>
+            <Link href="/dashboard" className="flex items-center gap-2">
+              <img src="/logo.png" alt="OSI" className="h-7 w-7 object-contain" />
+              <span className="text-base font-black tracking-tight text-slate-900">OSI 2026</span>
             </Link>
             <span className="text-xs font-semibold text-slate-400 border-l border-slate-200 pl-3">
               Presensi Sesi {sessionNumber}

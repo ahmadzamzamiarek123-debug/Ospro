@@ -57,7 +57,7 @@ export const VIOLATION_MATRIX: Record<ViolationType, MatrixItem[]> = {
     { name: "Keaktifan bertanya / menjawab materi", defaultConsequence: "Apresiasi keaktifan peserta" },
     { name: "Inisiatif membantu sesama / kebersihan", defaultConsequence: "Apresiasi inisiatif kepedulian lingkungan/sesama" },
     { name: "Menunjukkan komitmen & perubahan positif", defaultConsequence: "Apresiasi komitmen & perbaikan perilaku" },
-    { name: "Apresiasi lainnya", defaultConsequence: "Pencatatan poin kebaikan OSPRO" },
+    { name: "Apresiasi lainnya", defaultConsequence: "Pencatatan poin kebaikan OSI" },
   ],
 }
 

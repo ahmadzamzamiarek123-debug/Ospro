@@ -9,8 +9,13 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "KEDIS - Sistem Kedisiplinan OSPRO",
-  description: "Aplikasi pencatatan kedisiplinan OSPRO",
+  title: "OSI 2026 - Sistem Kedisiplinan & Presensi HIMASI",
+  description: "Sistem Informasi dan Presensi Kedisiplinan OSI HIMASI 2026",
+  icons: {
+    icon: "/logo.png",
+    shortcut: "/logo.png",
+    apple: "/logo.png"
+  }
 };
 
 export default function RootLayout({

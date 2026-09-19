@@ -89,9 +89,10 @@ export default function PublicLeaderboard() {
       <header className="border-b bg-white/80 backdrop-blur-md sticky top-0 z-50 w-full">
         <div className="w-full max-w-6xl mx-auto h-16 flex items-center justify-between px-4 sm:px-6">
           <div className="flex items-center gap-2">
-            <h1 className="text-xl font-black tracking-tighter">KEDIS<span className="text-primary">.</span></h1>
-            <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full uppercase tracking-wider hidden sm:inline">
-              OSPRO HIMASI 2026
+            <img src="/logo.png" alt="OSI" className="h-7 w-7 object-contain" />
+            <h1 className="text-xl font-black tracking-tight text-slate-900">OSI 2026</h1>
+            <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full uppercase tracking-wider hidden sm:inline">
+              OSI HIMASI 2026
             </span>
           </div>
           <div className="flex items-center gap-2">
@@ -117,7 +118,7 @@ export default function PublicLeaderboard() {
               <h2 className="text-3xl font-black text-slate-900 tracking-tight">Leaderboard Kedisiplinan</h2>
             </div>
             <p className="text-sm font-semibold text-slate-400">
-              Monitoring kedisiplinan dan poin apresiasi peserta OSPRO secara real-time.
+              Monitoring kedisiplinan dan poin apresiasi peserta OSI secara real-time.
             </p>
           </div>
           
@@ -167,7 +168,7 @@ function LeaderboardContent({ members }: { members: MemberWithPoints[] }) {
                     <div className="flex items-center gap-1.5 flex-wrap">
                       <span className="font-bold text-slate-900 text-sm leading-tight truncate">{m.name}</span>
                       {m.is_redo_ospro && (
-                        <Badge variant="destructive" className="text-[8px] h-3.5 px-1 bg-red-500 border-none font-black uppercase tracking-tighter shrink-0">ULANG</Badge>
+                        <Badge variant="destructive" className="text-[8px] h-3.5 px-1 bg-red-500 border-none font-black uppercase tracking-tighter shrink-0">ULANG OSI</Badge>
                       )}
                     </div>
                     <div className="flex items-center gap-2">
@@ -228,7 +229,7 @@ function LeaderboardContent({ members }: { members: MemberWithPoints[] }) {
                     <div className="flex items-center gap-3">
                       <span className="font-bold text-slate-900 group-hover:text-primary transition-colors text-sm tracking-tight">{m.name}</span>
                       {m.is_redo_ospro && (
-                        <Badge variant="destructive" className="text-[9px] h-4 px-1.5 bg-red-500 border-none font-black uppercase tracking-tighter">ULANG</Badge>
+                        <Badge variant="destructive" className="text-[9px] h-4 px-1.5 bg-red-500 border-none font-black uppercase tracking-tighter">ULANG OSI</Badge>
                       )}
                       {m.has_escalation && (
                         <div className="flex items-center gap-1.5 text-[9px] font-black text-orange-600 uppercase">

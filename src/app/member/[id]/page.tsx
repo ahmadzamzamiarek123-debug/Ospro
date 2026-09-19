@@ -73,7 +73,10 @@ export default function MemberDetailPage() {
     <div className="min-h-screen bg-slate-50">
       <header className="border-b bg-white/80 backdrop-blur-md sticky top-0 z-50">
         <div className="container max-w-4xl mx-auto h-14 flex items-center justify-between px-4">
-          <Link href="/" className="text-xl font-bold tracking-tight">KEDIS<span className="text-primary">.</span></Link>
+          <Link href="/dashboard" className="flex items-center gap-2">
+            <img src="/logo.png" alt="OSI" className="h-7 w-7 object-contain" />
+            <span className="text-base font-black tracking-tight text-slate-900">OSI 2026</span>
+          </Link>
           <Button variant="ghost" size="sm" onClick={() => router.back()} className="text-slate-500 font-bold gap-1 text-xs px-2">
             <ChevronLeft className="h-4 w-4" /> Kembali
           </Button>
@@ -114,7 +117,7 @@ export default function MemberDetailPage() {
                     <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex flex-col items-center justify-center">
                       <span className="text-[10px] uppercase font-black text-slate-400">Status</span>
                       {status.isRedoOspro ? (
-                        <Badge variant="destructive" className="font-black">ULANG</Badge>
+                        <Badge variant="destructive" className="font-black">ULANG OSI</Badge>
                       ) : (
                         <Badge className="bg-emerald-100 text-emerald-600 border-none font-black">AMAN</Badge>
                       )}

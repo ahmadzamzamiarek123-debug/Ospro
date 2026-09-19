@@ -347,12 +347,18 @@ export default function MobileScannerPage() {
 
       {/* Minimal Header */}
       <header className="flex items-center justify-between py-2">
-        <Link
-          href="/dashboard"
-          className="text-xs font-semibold text-slate-400 hover:text-white inline-flex items-center gap-1 transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" /> Dashboard
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/dashboard"
+            className="text-xs font-semibold text-slate-400 hover:text-white inline-flex items-center gap-1 transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+          <div className="flex items-center gap-1.5 pl-1">
+            <img src="/logo.png" alt="OSI" className="h-5 w-5 object-contain" />
+            <span className="text-xs font-bold text-white tracking-tight">OSI 2026</span>
+          </div>
+        </div>
 
         <div className="flex items-center gap-1.5">
           {availableCameras.length > 1 && (
@@ -523,7 +529,7 @@ export default function MobileScannerPage() {
 
       {/* Minimal Footer */}
       <footer className="text-center py-2">
-        <span className="text-[10px] font-mono text-slate-600">Presensi Barcode OSPRO 2026</span>
+        <span className="text-[10px] font-mono text-slate-600">Presensi Barcode OSI 2026</span>
       </footer>
 
       <style jsx global>{`

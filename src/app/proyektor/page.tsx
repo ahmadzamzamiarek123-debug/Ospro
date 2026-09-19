@@ -111,8 +111,9 @@ export default function ProyektorPage() {
               <ArrowLeft className="h-4 w-4" />
             </Link>
             <div className="flex items-center gap-2">
-              <h1 className="text-xl font-black tracking-tighter text-slate-900">
-                KEDIS<span className="text-primary">.</span>
+              <img src="/logo.png" alt="OSI" className="h-7 w-7 object-contain" />
+              <h1 className="text-base font-black tracking-tight text-slate-900">
+                OSI 2026
               </h1>
               <span className="text-[10px] font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full uppercase tracking-wider hidden sm:inline">
                 Layar Proyektor Aula
@@ -154,7 +155,7 @@ export default function ProyektorPage() {
               </h2>
             </div>
             <p className="text-xs sm:text-sm font-medium text-slate-500">
-              Monitoring kedisiplinan dan poin apresiasi peserta OSPRO secara real-time.
+              Monitoring kedisiplinan dan poin apresiasi peserta OSI secara real-time.
             </p>
           </div>
           
@@ -206,7 +207,7 @@ function LeaderboardContent({ members }: { members: MemberWithPoints[] }) {
                     <span className="font-bold text-slate-900 text-sm leading-tight truncate">{m.name}</span>
                     {m.is_redo_ospro && (
                       <Badge variant="destructive" className="text-[8px] h-3.5 px-1 bg-red-500 border-none font-black uppercase tracking-tighter shrink-0">
-                        ULANG
+                        ULANG OSI
                       </Badge>
                     )}
                   </div>
@@ -279,7 +280,7 @@ function LeaderboardContent({ members }: { members: MemberWithPoints[] }) {
                     <span className="font-bold text-slate-900 text-sm tracking-tight">{m.name}</span>
                     {m.is_redo_ospro && (
                       <Badge variant="destructive" className="text-[8px] h-4 px-1.5 bg-red-500 border-none font-black uppercase tracking-tighter">
-                        ULANG
+                        ULANG OSI
                       </Badge>
                     )}
                     {m.has_escalation && (

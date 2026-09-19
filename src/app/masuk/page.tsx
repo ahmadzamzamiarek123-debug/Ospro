@@ -64,19 +64,22 @@ export default function LoginPage() {
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4 animate-fade-in">
       <div className="w-full max-w-sm space-y-6">
         <Link
-          href="/"
-          className="inline-flex items-center text-xs font-bold text-slate-400 hover:text-primary transition-colors uppercase tracking-widest"
+          href="/tiket"
+          className="inline-flex items-center text-xs font-semibold text-slate-500 hover:text-slate-900 transition-colors"
         >
-          <ArrowLeft className="h-3 w-3 mr-1" /> Beranda
+          <ArrowLeft className="h-3 w-3 mr-1" /> Tiket Peserta
         </Link>
 
-        <div className="space-y-1">
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-            KEDIS<span className="text-primary">.</span>
-          </h1>
-          <p className="text-sm font-medium text-slate-500">
-            Masuk sebagai Panitia
-          </p>
+        <div className="space-y-2 text-center">
+          <img src="/logo.png" alt="Logo OSI" className="h-14 w-14 object-contain mx-auto" />
+          <div className="space-y-0.5">
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+              OSI 2026
+            </h1>
+            <p className="text-xs font-medium text-slate-500">
+              Masuk sebagai Panitia
+            </p>
+          </div>
         </div>
 
         <Card className="border-none shadow-sm rounded-2xl overflow-hidden bg-white">

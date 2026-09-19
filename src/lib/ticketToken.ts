@@ -1,6 +1,6 @@
 import crypto from "crypto"
 
-const SECRET = process.env.TICKET_SECRET || "kedis-ospro-ticket-signature-2026-key"
+const SECRET = process.env.TICKET_SECRET || "osi-ticket-signature-2026-key"
 
 /**
  * Membuat signature HMAC untuk NIM
@@ -15,12 +15,12 @@ function createSignature(nim: string): string {
 
 /**
  * Menghasilkan token Barcode/QR resmi untuk tiket maba
- * Format: KEDIS-TICKET:v1:<nim>:<signature>
+ * Format: OSI-TICKET:v1:<nim>:<signature>
  */
 export function generateTicketToken(nim: string): string {
   const cleanNim = nim.trim().toLowerCase()
   const sig = createSignature(cleanNim)
-  return `KEDIS-TICKET:v1:${cleanNim}:${sig}`
+  return `OSI-TICKET:v1:${cleanNim}:${sig}`
 }
 
 /**
@@ -33,8 +33,8 @@ export function verifyTicketToken(token: string): { valid: boolean; nim?: string
 
   const trimmed = token.trim()
 
-  // 1. Dukung format resmi KEDIS-TICKET
-  if (trimmed.startsWith("KEDIS-TICKET:v1:")) {
+  // 1. Dukung format resmi OSI-TICKET (dan backward compatibility KEDIS-TICKET)
+  if (trimmed.startsWith("OSI-TICKET:v1:") || trimmed.startsWith("KEDIS-TICKET:v1:")) {
     const parts = trimmed.split(":")
     if (parts.length !== 4) {
       return { valid: false, error: "Format barcode tiket tidak sesuai SOP" }
@@ -57,5 +57,5 @@ export function verifyTicketToken(token: string): { valid: boolean; nim?: string
     return { valid: true, nim: trimmed.toLowerCase() }
   }
 
-  return { valid: false, error: "Barcode bukan tiket resmi KEDIS OSPRO 2026" }
+  return { valid: false, error: "Barcode bukan tiket resmi OSI 2026" }
 }

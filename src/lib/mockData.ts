@@ -75,8 +75,8 @@ export const DUMMY_VIOLATIONS: ViolationWithDetails[] = [
     violation_category: "Terlambat 5–10 menit",
     consequence: "Teguran + catatan + refleksi singkat",
     status: "pending",
-    chronology: "Terlambat 7 menit saat upacara pembukaan sesi 1 OSPRO",
-    notes: "Terlambat 7 menit saat upacara pembukaan sesi 1 OSPRO",
+    chronology: "Terlambat 7 menit saat upacara pembukaan sesi 1 OSI",
+    notes: "Terlambat 7 menit saat upacara pembukaan sesi 1 OSI",
     recorded_by: "u-002",
     created_at: new Date().toISOString(),
     member: {

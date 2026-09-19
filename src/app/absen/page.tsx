@@ -213,10 +213,11 @@ function AbsenContent() {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
         <div className="w-full max-w-sm space-y-4">
-          <div className="space-y-1">
-            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-              KEDIS<span className="text-primary">.</span>
-            </h1>
+          <div>
+            <div className="flex items-center gap-2">
+              <img src="/logo.png" alt="OSI" className="h-8 w-8 object-contain" />
+              <h1 className="text-2xl font-black text-slate-900 tracking-tight">OSI 2026</h1>
+            </div>
             <p className="text-sm font-medium text-slate-500">
               Presensi {successData.role === "panitia" ? "Panitia" : "Peserta"} • Sesi {successData.sessionNumber}
             </p>
@@ -290,10 +291,11 @@ function AbsenContent() {
           <ArrowLeft className="h-3 w-3 mr-1" /> Beranda
         </Link>
 
-        <div className="space-y-1">
-          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight">
-            KEDIS<span className="text-primary">.</span>
-          </h1>
+        <div>
+          <div className="flex items-center gap-2">
+            <img src="/logo.png" alt="OSI" className="h-8 w-8 object-contain" />
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight">OSI 2026</h1>
+          </div>
           <p className="text-sm font-medium text-slate-500">
             {member?.role === "panitia" ? "Presensi Panitia" : "Presensi Peserta & Panitia"} • Sesi {sessionNumber}
           </p>

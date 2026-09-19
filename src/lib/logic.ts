@@ -7,7 +7,8 @@ export const POINTS_MAP: Record<ViolationType, Record<number, number>> = {
   baik: { 1: 0, 2: 0, 3: 0, 4: 0 },
 };
 
-export const REDO_OSPRO_THRESHOLD = 50;
+export const REDO_OSI_THRESHOLD = 50;
+export const REDO_OSPRO_THRESHOLD = REDO_OSI_THRESHOLD;
 export const ESCALATION_THRESHOLD = 3;
 
 export function calculatePoints(violations: Violation[]) {

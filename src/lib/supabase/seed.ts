@@ -18,7 +18,7 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey, {
 })
 
 async function seed() {
-  console.log('=== MEMULAI SEEDING DATA DUMMY KEDIS HIMASI 2026 ===\n')
+  console.log('=== MEMULAI SEEDING DATA DUMMY OSI HIMASI 2026 ===\n')
 
   // 1. Akun Super Admin
   const adminNim = 'admin'
@@ -84,8 +84,8 @@ async function seed() {
     console.log('   -> Petugas Komdis siap di database!')
   }
 
-  // 3. Sesi OSPRO (Hari 1 s/d 4)
-  console.log('\n3. Menyiapkan Sesi OSPRO (1, 2, 3, 4)...')
+  // 3. Sesi OSI (Hari 1 s/d 4)
+  console.log('\n3. Menyiapkan Sesi OSI (1, 2, 3, 4)...')
   const today = new Date().toISOString().split('T')[0]
   const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0]
   const day3 = new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0]
