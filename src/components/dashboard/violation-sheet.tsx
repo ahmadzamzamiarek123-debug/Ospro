@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Member, Session, ViolationType } from "@/types/database"
 import { createClient } from "@/lib/supabase/client"
 import {
@@ -19,13 +19,23 @@ import { ChevronRight, CheckCircle2, ShieldAlert, Heart, Info, Scale } from "luc
 export function ViolationSheet({ member, session }: { member: Member, session: Session | null }) {
   const [open, setOpen] = useState(false)
   const [type, setType] = useState<ViolationType | null>(null)
+  const [selectedSession, setSelectedSession] = useState<number>(session?.session_number || 1)
   const [notes, setNotes] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const supabase = createClient()
 
+  useEffect(() => {
+    if (session?.session_number) {
+      setSelectedSession(session.session_number)
+    }
+  }, [session?.session_number, open])
+
   const resetForm = () => {
     setType(null)
     setNotes("")
+    if (session?.session_number) {
+      setSelectedSession(session.session_number)
+    }
   }
 
   const getTypeLabel = (t: ViolationType) => {
@@ -38,7 +48,7 @@ export function ViolationSheet({ member, session }: { member: Member, session: S
   }
 
   const handleSubmit = async () => {
-    if (!type || !session) return
+    if (!type) return
     
     // Validasi Wajib: Catatan tidak boleh kosong
     const cleanNotes = notes.trim()
@@ -55,7 +65,7 @@ export function ViolationSheet({ member, session }: { member: Member, session: S
       const { error } = await supabase.from('violations').insert({
         member_id: member.id,
         violation_type: type,
-        session_number: session.session_number,
+        session_number: selectedSession,
         violation_category: getTypeLabel(type),
         consequence: null,
         status: type === 'baik' ? 'selesai' : 'pending',
@@ -67,7 +77,7 @@ export function ViolationSheet({ member, session }: { member: Member, session: S
       if (error) throw error
 
       toast.success("Catatan kedisiplinan disimpan", {
-        description: `${member.name} • ${getTypeLabel(type)} (Sesi ${session.session_number})`,
+        description: `${member.name} • ${getTypeLabel(type)} (Sesi ${selectedSession})`,
         icon: <CheckCircle2 className="h-4 w-4 text-emerald-500" />
       })
       setOpen(false)
@@ -117,9 +127,44 @@ export function ViolationSheet({ member, session }: { member: Member, session: S
               )}
             </div>
             <SheetDescription className="text-xs sm:text-sm font-bold text-slate-500">
-              {member.name} ({member.nim}) • Sesi {session?.session_number || "?"}
+              {member.name} ({member.nim})
             </SheetDescription>
           </SheetHeader>
+
+          {/* Pemilihan Sesi (Default Sesi Aktif, bisa diganti untuk susulan) */}
+          <div className="bg-slate-50 border border-slate-200/80 p-2.5 rounded-2xl space-y-1.5">
+            <div className="flex items-center justify-between text-xs px-1">
+              <span className="font-bold text-slate-700">Sesi Pencatatan:</span>
+              <span className="text-[10px] font-mono font-semibold text-slate-400">
+                {selectedSession === session?.session_number ? "🟢 Sesuai Sesi Aktif" : "⚠️ Kejadian Susulan"}
+              </span>
+            </div>
+            <div className="grid grid-cols-3 gap-1.5 bg-slate-200/70 p-1 rounded-xl">
+              {[1, 2, 3].map((num) => {
+                const isSelected = selectedSession === num
+                const isCurrentlyActive = session?.session_number === num
+                return (
+                  <button
+                    key={num}
+                    type="button"
+                    onClick={() => setSelectedSession(num)}
+                    className={`py-1.5 px-2 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1 ${
+                      isSelected
+                        ? "bg-white text-slate-900 shadow-2xs scale-[1.01]"
+                        : "text-slate-500 hover:text-slate-800"
+                    }`}
+                  >
+                    <span>Sesi {num}</span>
+                    {isCurrentlyActive && (
+                      <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1 py-0.2 rounded border border-emerald-200">
+                        Aktif
+                      </span>
+                    )}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
 
           {!type ? (
             <div className="space-y-3">

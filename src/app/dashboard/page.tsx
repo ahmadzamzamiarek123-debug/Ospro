@@ -6,9 +6,10 @@ import { Member, Session, User } from "@/types/database"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Search, UserCircle, Users, Award, Calendar, LogOut, ShieldCheck, Camera, QrCode, Ticket, ExternalLink, Monitor } from "lucide-react"
+import { Search, UserCircle, Users, Award, Calendar, LogOut, ShieldCheck, Camera, QrCode, Ticket, ExternalLink, Monitor, Loader2 } from "lucide-react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { toast } from "sonner"
 import { ViolationSheet } from "@/components/dashboard/violation-sheet"
 import { AddMemberDialog } from "@/components/dashboard/add-member-dialog"
 import { AddOfficerDialog } from "@/components/dashboard/add-officer-dialog"
@@ -65,17 +66,12 @@ export default function DashboardPage() {
       setOfficers([])
     }
 
-    // Sesi aktif
+    // Sesi aktif terpusat (tidak terikat kalender)
     try {
-      const today = new Date().toISOString().split('T')[0]
-      const { data: sessionData } = await supabase
-        .from('sessions')
-        .select('*')
-        .eq('date', today)
-        .single()
-
-      if (sessionData) {
-        setActiveSession(sessionData)
+      const res = await fetch('/api/session/active')
+      const json = await res.json()
+      if (json.success && json.session) {
+        setActiveSession(json.session)
       } else {
         const { data: firstActive } = await supabase
           .from('sessions')
@@ -95,6 +91,31 @@ export default function DashboardPage() {
     fetchData()
   }, [fetchData])
 
+  const [isSwitchingSession, setIsSwitchingSession] = useState(false)
+
+  const handleSwitchSession = async (targetSession: number) => {
+    if (activeSession?.session_number === targetSession || isSwitchingSession) return
+    setIsSwitchingSession(true)
+    try {
+      const res = await fetch('/api/session/active', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionNumber: targetSession })
+      })
+      const data = await res.json()
+      if (data.success) {
+        toast.success(data.message || `Sesi ${targetSession} berhasil diaktifkan secara terpusat!`)
+        setActiveSession(data.session || { ...activeSession, session_number: targetSession, is_active: true } as Session)
+      } else {
+        toast.error(data.error || "Gagal mengaktifkan sesi")
+      }
+    } catch {
+      toast.error("Gagal terhubung ke server")
+    } finally {
+      setIsSwitchingSession(false)
+    }
+  }
+
   const filteredMembers = members.filter(m => 
     m.name.toLowerCase().includes(search.toLowerCase()) || 
     m.nim.toLowerCase().includes(search.toLowerCase()) ||
@@ -113,11 +134,63 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-6xl mx-auto">
+    <div className="space-y-5 max-w-6xl mx-auto">
+      {/* Kontrol Sesi Terpusat Khusus Superadmin */}
+      {isAdmin && (
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-4 shadow-xs flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-in fade-in duration-200">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
+              <Calendar className="h-5 w-5" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-sm font-black text-slate-900 tracking-tight">Kontrol Sesi Terpusat</h2>
+                <span className="text-[10px] font-bold font-mono px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 border border-emerald-200">
+                  Sesi {activeSession?.session_number || 1} Aktif
+                </span>
+                {isSwitchingSession && (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-slate-400" />
+                )}
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Pilih sesi yang sedang berlangsung. Semua HP scanner panitia & form komdis otomatis tersinkron ke sesi ini.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center bg-slate-100 p-1 rounded-xl self-stretch sm:self-auto justify-center gap-1 border border-slate-200/60">
+            {[1, 2, 3].map((num) => {
+              const isSelected = (activeSession?.session_number || 1) === num
+              return (
+                <button
+                  key={num}
+                  type="button"
+                  onClick={() => handleSwitchSession(num)}
+                  disabled={isSwitchingSession}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 ${
+                    isSelected
+                      ? "bg-white text-slate-900 shadow-xs scale-[1.02]"
+                      : "text-slate-500 hover:text-slate-900 disabled:opacity-50"
+                  }`}
+                >
+                  <span className={`h-2 w-2 rounded-full ${isSelected ? "bg-emerald-500 animate-pulse" : "bg-slate-300"}`} />
+                  <span>Sesi {num}</span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
       <section className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         <StatCard title="Peserta" value={members.filter(m => m.role === 'peserta').length} icon={<Users className="h-4 w-4" />} color="orange" />
         <StatCard title="Panitia" value={members.filter(m => m.role === 'panitia').length} icon={<Award className="h-4 w-4" />} color="blue" />
-        <StatCard title="Sesi" value={activeSession?.session_number || "-"} icon={<Calendar className="h-4 w-4" />} color="green" />
+        <StatCard 
+          title="Sesi Aktif" 
+          value={`Sesi ${activeSession?.session_number || 1}`} 
+          icon={<Calendar className="h-4 w-4" />} 
+          color="green" 
+        />
         <StatCard 
           title="Keluar" 
           value="Log Out" 

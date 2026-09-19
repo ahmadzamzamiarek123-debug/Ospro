@@ -67,6 +67,22 @@ export default function MobileScannerPage() {
     soundEnabledRef.current = soundEnabled
   }, [soundEnabled])
 
+  // Ambil Sesi Aktif Terpusat dari Server saat HP Scanner dibuka
+  useEffect(() => {
+    async function loadCentralSession() {
+      try {
+        const res = await fetch("/api/session/active")
+        const data = await res.json()
+        if (data.success && data.sessionNumber) {
+          setSessionNumber(data.sessionNumber)
+        }
+      } catch {
+        // Abaikan jika offline/error
+      }
+    }
+    loadCentralSession()
+  }, [])
+
   // Audio tone
   const playBeep = useCallback((type: "success" | "warning" | "error") => {
     if (!soundEnabledRef.current) return
@@ -398,9 +414,11 @@ export default function MobileScannerPage() {
 
           <button
             onClick={() => setSessionNumber((prev) => (prev % 3) + 1)}
-            className="text-xs font-mono font-bold px-2.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 shadow-2xs transition-colors"
+            className="text-xs font-mono font-bold px-2.5 py-1.5 rounded-xl bg-white hover:bg-slate-100 text-slate-800 border border-slate-200 shadow-2xs transition-colors flex items-center gap-1.5"
+            title="Sesi Presensi (Klik untuk ganti manual jika perlu)"
           >
-            Sesi {sessionNumber}
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <span>Sesi {sessionNumber}</span>
           </button>
         </div>
       </header>

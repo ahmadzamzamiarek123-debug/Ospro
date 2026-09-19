@@ -97,6 +97,22 @@ export default function PresensiLayarPage() {
     }
   }, [sessionNumber])
 
+  // Ambil sesi aktif terpusat dari server saat pertama kali dibuka
+  useEffect(() => {
+    async function loadCentralSession() {
+      try {
+        const res = await fetch("/api/session/active")
+        const data = await res.json()
+        if (data.success && data.sessionNumber) {
+          setSessionNumber(data.sessionNumber)
+        }
+      } catch {
+        // Fallback
+      }
+    }
+    loadCentralSession()
+  }, [])
+
   // Initial Fetch & 3-Second Polling
   useEffect(() => {
     fetchAttendanceList()
@@ -257,22 +273,17 @@ export default function PresensiLayarPage() {
           <div className="flex items-center gap-2 sm:gap-3">
             {/* Pilihan Sesi (3 Sesi) */}
             <div className="flex items-center bg-slate-100 p-1 rounded-xl">
-              {[
-                { num: 1, date: "23 Sep" },
-                { num: 2, date: "24 Sep" },
-                { num: 3, date: "25 Sep" }
-              ].map((s) => (
+              {[1, 2, 3].map((num) => (
                 <button
-                  key={s.num}
-                  onClick={() => setSessionNumber(s.num)}
+                  key={num}
+                  onClick={() => setSessionNumber(num)}
                   className={`px-2.5 sm:px-3 py-1 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 ${
-                    sessionNumber === s.num
+                    sessionNumber === num
                       ? "bg-white text-slate-900 shadow-xs"
                       : "text-slate-500 hover:text-slate-900"
                   }`}
                 >
-                  <span>Sesi {s.num}</span>
-                  <span className="text-[10px] font-mono text-slate-400 hidden md:inline">({s.date})</span>
+                  <span>Sesi {num}</span>
                 </button>
               ))}
             </div>
