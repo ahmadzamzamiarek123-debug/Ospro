@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server"
 import { verifyAttendanceToken } from "@/lib/attendanceToken"
 import { createClient } from "@/lib/supabase/server"
-import { DUMMY_MEMBERS, DUMMY_ATTENDANCE } from "@/lib/mockData"
 
 export async function GET(request: Request) {
   try {
@@ -61,26 +60,12 @@ export async function GET(request: Request) {
         }
       }
     } catch {
-      // Fallback ke dummy
-    }
-
-    if (!member) {
-      const dummy = DUMMY_MEMBERS.find((m) => m.nim.toLowerCase() === nim.toLowerCase())
-      if (dummy) {
-        member = dummy
-        const att = DUMMY_ATTENDANCE.find(
-          (a) => a.member_id === dummy.id && a.session_number === sessionNumber
-        )
-        if (att) {
-          alreadyAttended = true
-          attendedAt = att.scanned_at
-        }
-      }
+      // ignore
     }
 
     if (!member) {
       return NextResponse.json(
-        { error: `NIM ${nim} tidak terdaftar sebagai peserta maupun panitia.` },
+        { error: `NIM ${nim} tidak terdaftar dalam database peserta/panitia.` },
         { status: 404 }
       )
     }

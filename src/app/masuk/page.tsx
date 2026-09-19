@@ -23,13 +23,6 @@ export default function LoginPage() {
       ? cleanNim
       : `${cleanNim}@kedis.local`;
 
-    const isMockAdmin =
-      (cleanNim === "admin" || cleanNim === "20240001") &&
-      password === "admin12345";
-    const isMockOfficer =
-      (cleanNim === "komdis" || cleanNim === "20240002") &&
-      password === "komdis12345";
-
     try {
       const supabase = createClient();
       const { error } = await supabase.auth.signInWithPassword({
@@ -38,56 +31,15 @@ export default function LoginPage() {
       });
 
       if (error) {
-        if (isMockAdmin || isMockOfficer) {
-          const userObj = isMockAdmin
-            ? {
-                id: "u-001",
-                nim: cleanNim,
-                email: authEmail,
-                name: "Super Admin Kedis",
-                role: "admin",
-              }
-            : {
-                id: "u-002",
-                nim: cleanNim,
-                email: authEmail,
-                name: "Captain Sarah (Komdis)",
-                role: "viewer",
-              };
-          document.cookie = `mock_user=${encodeURIComponent(JSON.stringify(userObj))}; path=/; max-age=86400; SameSite=Lax`;
-          toast.success("Berhasil masuk");
-          window.location.href = "/dashboard";
-          return;
-        }
-        toast.error("NIM atau password salah");
+        toast.error("NIM atau password salah. Pastikan database Supabase terhubung.");
         return;
       }
 
       toast.success("Berhasil masuk");
       window.location.href = "/dashboard";
-    } catch {
-      if (isMockAdmin || isMockOfficer) {
-        const userObj = isMockAdmin
-          ? {
-              id: "u-001",
-              nim: cleanNim,
-              email: authEmail,
-              name: "Super Admin Kedis",
-              role: "admin",
-            }
-          : {
-              id: "u-002",
-              nim: cleanNim,
-              email: authEmail,
-              name: "Captain Sarah (Komdis)",
-              role: "viewer",
-            };
-        document.cookie = `mock_user=${encodeURIComponent(JSON.stringify(userObj))}; path=/; max-age=86400; SameSite=Lax`;
-        toast.success("Berhasil masuk");
-        window.location.href = "/dashboard";
-        return;
-      }
-      toast.error("Terjadi kesalahan sistem");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Periksa koneksi"
+      toast.error("Gagal terhubung ke database: " + message);
     } finally {
       setIsLoading(false);
     }

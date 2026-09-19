@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server"
 import { verifyAttendanceToken } from "@/lib/attendanceToken"
 import { createClient } from "@/lib/supabase/server"
-import { DUMMY_MEMBERS, DUMMY_ATTENDANCE } from "@/lib/mockData"
 
 export async function POST(request: Request) {
   try {
@@ -38,12 +37,7 @@ export async function POST(request: Request) {
     }
 
     if (!member) {
-      const dummy = DUMMY_MEMBERS.find((m) => m.nim.toLowerCase() === cleanNim.toLowerCase())
-      if (dummy) member = dummy
-    }
-
-    if (!member) {
-      return NextResponse.json({ error: `Peserta dengan NIM ${cleanNim} tidak ditemukan.` }, { status: 404 })
+      return NextResponse.json({ error: `Peserta dengan NIM ${cleanNim} tidak terdaftar di database.` }, { status: 404 })
     }
 
     // 2. Cek apakah sudah absen di sesi ini
@@ -62,16 +56,7 @@ export async function POST(request: Request) {
         )
       }
     } catch {
-      // cek dummy jika supabase offline
-      const existingDummy = DUMMY_ATTENDANCE.find(
-        (a) => a.member_id === member.id && a.session_number === sessionNumber
-      )
-      if (existingDummy) {
-        return NextResponse.json(
-          { error: "NIM ini sudah tercatat hadir pada sesi ini sebelumnya.", alreadyAttended: true, attendedAt: existingDummy.scanned_at },
-          { status: 400 }
-        )
-      }
+      // ignore
     }
 
     // 3. Catat Kehadiran
@@ -93,30 +78,23 @@ export async function POST(request: Request) {
         .single()
 
       if (error) {
-        // jika terjadi konflik unique
         if (error.code === "23505") {
           return NextResponse.json(
             { error: "NIM ini sudah tercatat hadir pada sesi ini.", alreadyAttended: true },
             { status: 400 }
           )
         }
-        console.error("Gagal simpan presensi ke Supabase:", error)
+        return NextResponse.json({ error: "Gagal menyimpan presensi: " + error.message }, { status: 500 })
       } else {
         insertedRecord = data
       }
-    } catch {
-      // fallback
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Error"
+      return NextResponse.json({ error: "Gagal terhubung ke database: " + message }, { status: 500 })
     }
 
     if (!insertedRecord) {
-      // Simpan ke local dummy array
-      const dummyRecord = {
-        id: `att-${Date.now()}`,
-        ...attendanceRecord,
-        notes: null
-      }
-      DUMMY_ATTENDANCE.push(dummyRecord)
-      insertedRecord = dummyRecord
+      return NextResponse.json({ error: "Gagal mencatat presensi." }, { status: 500 })
     }
 
     return NextResponse.json({

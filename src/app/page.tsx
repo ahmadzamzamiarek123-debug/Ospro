@@ -19,11 +19,10 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Search, AlertTriangle, Shield } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import Link from "next/link"
-import { DUMMY_MEMBERS, DUMMY_VIOLATIONS } from "@/lib/mockData"
 
 export default function PublicLeaderboard() {
-  const [members, setMembers] = useState<Member[]>(() => DUMMY_MEMBERS.filter(m => m.role === 'peserta'))
-  const [violations, setViolations] = useState<Violation[]>(() => DUMMY_VIOLATIONS as unknown as Violation[])
+  const [members, setMembers] = useState<Member[]>([])
+  const [violations, setViolations] = useState<Violation[]>([])
   const [search, setSearch] = useState("")
 
   useEffect(() => {
@@ -41,20 +40,11 @@ export default function PublicLeaderboard() {
           .from('violations')
           .select('*')
         
-        if (membersData && membersData.length > 0) {
-          setMembers(membersData)
-        } else {
-          setMembers(DUMMY_MEMBERS.filter(m => m.role === 'peserta'))
-        }
-
-        if (violationsData && violationsData.length > 0) {
-          setViolations(violationsData)
-        } else {
-          setViolations(DUMMY_VIOLATIONS as unknown as Violation[])
-        }
+        setMembers(membersData || [])
+        setViolations(violationsData || [])
       } catch {
-        setMembers(DUMMY_MEMBERS.filter(m => m.role === 'peserta'))
-        setViolations(DUMMY_VIOLATIONS as unknown as Violation[])
+        setMembers([])
+        setViolations([])
       }
     }
 

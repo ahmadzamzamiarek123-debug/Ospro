@@ -11,20 +11,19 @@ import { useRouter } from "next/navigation"
 import { ViolationSheet } from "@/components/dashboard/violation-sheet"
 import { AddMemberDialog } from "@/components/dashboard/add-member-dialog"
 import { AddOfficerDialog } from "@/components/dashboard/add-officer-dialog"
-import { DUMMY_MEMBERS, DUMMY_SESSION, DUMMY_USERS } from "@/lib/mockData"
 
 export default function DashboardPage() {
-  const [members, setMembers] = useState<Member[]>(() => DUMMY_MEMBERS)
-  const [officers, setOfficers] = useState<User[]>(() => DUMMY_USERS as unknown as User[])
+  const [members, setMembers] = useState<Member[]>([])
+  const [officers, setOfficers] = useState<User[]>([])
   const [search, setSearch] = useState("")
-  const [activeSession, setActiveSession] = useState<Session | null>(() => DUMMY_SESSION)
+  const [activeSession, setActiveSession] = useState<Session | null>(null)
   const [currentUserRole, setCurrentUserRole] = useState<string>("viewer")
   const router = useRouter()
 
   const fetchData = useCallback(async () => {
     const supabase = createClient()
 
-    // Ambil data user login (supabase auth atau mock cookie)
+    // Ambil data user login supabase auth
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
@@ -34,22 +33,12 @@ export default function DashboardPage() {
           .eq('id', user.id)
           .single()
         if (profile) setCurrentUserRole(profile.role)
-        if (user.email?.startsWith('admin') || profile?.nim === 'admin') setCurrentUserRole('admin')
-      } else {
-        const match = document.cookie.match(/mock_user=([^;]+)/)
-        if (match) {
-          const parsed = JSON.parse(decodeURIComponent(match[1]))
-          if (parsed.role) setCurrentUserRole(parsed.role)
-          if (parsed.nim === 'admin' || parsed.email?.startsWith('admin')) setCurrentUserRole('admin')
+        if (user.email?.startsWith('admin') || profile?.nim === 'admin' || profile?.role === 'admin') {
+          setCurrentUserRole('admin')
         }
       }
     } catch {
-      const match = document.cookie.match(/mock_user=([^;]+)/)
-      if (match) {
-        const parsed = JSON.parse(decodeURIComponent(match[1]))
-        if (parsed.role) setCurrentUserRole(parsed.role)
-        if (parsed.nim === 'admin' || parsed.email?.startsWith('admin')) setCurrentUserRole('admin')
-      }
+      // ignore
     }
 
     // Ambil data members
@@ -59,13 +48,9 @@ export default function DashboardPage() {
         .select('*')
         .order('name', { ascending: true })
       
-      if (membersData && membersData.length > 0) {
-        setMembers(membersData)
-      } else {
-        setMembers(DUMMY_MEMBERS)
-      }
+      setMembers(membersData || [])
     } catch {
-      setMembers(DUMMY_MEMBERS)
+      setMembers([])
     }
 
     // Ambil data officers jika admin
@@ -74,13 +59,9 @@ export default function DashboardPage() {
         .from('users')
         .select('*')
         .order('created_at', { ascending: false })
-      if (usersData && usersData.length > 0) {
-        setOfficers(usersData as User[])
-      } else {
-        setOfficers(DUMMY_USERS as unknown as User[])
-      }
+      setOfficers((usersData as User[]) || [])
     } catch {
-      setOfficers(DUMMY_USERS as unknown as User[])
+      setOfficers([])
     }
 
     // Sesi aktif
@@ -95,10 +76,17 @@ export default function DashboardPage() {
       if (sessionData) {
         setActiveSession(sessionData)
       } else {
-        setActiveSession(DUMMY_SESSION)
+        const { data: firstActive } = await supabase
+          .from('sessions')
+          .select('*')
+          .eq('is_active', true)
+          .order('session_number', { ascending: true })
+          .limit(1)
+          .single()
+        setActiveSession(firstActive || null)
       }
     } catch {
-      setActiveSession(DUMMY_SESSION)
+      setActiveSession(null)
     }
   }, [])
 
@@ -117,7 +105,6 @@ export default function DashboardPage() {
   const isAdmin = currentUserRole === 'admin'
 
   const handleLogout = async () => {
-    document.cookie = "mock_user=; path=/; max-age=0"
     const supabase = createClient()
     await supabase.auth.signOut()
     router.push("/masuk")

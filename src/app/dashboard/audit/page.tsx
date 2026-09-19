@@ -18,11 +18,9 @@ import { Card } from "@/components/ui/card"
 import { ChevronLeft, User, Calendar, CheckCircle2, Clock, Sparkles } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
-import { DUMMY_VIOLATIONS } from "@/lib/mockData"
-
 export default function AuditTrailPage() {
-  const [violations, setViolations] = useState<ViolationWithDetails[]>(() => DUMMY_VIOLATIONS)
-  const [loading, setLoading] = useState(false)
+  const [violations, setViolations] = useState<ViolationWithDetails[]>([])
+  const [loading, setLoading] = useState(true)
   const router = useRouter()
 
   const fetchAudit = async () => {
@@ -33,13 +31,9 @@ export default function AuditTrailPage() {
         .select('*, member:members(name, nim, kelompok), recorder:users(name)')
         .order('created_at', { ascending: false })
       
-      if (data && data.length > 0) {
-        setViolations(data as unknown as ViolationWithDetails[])
-      } else {
-        setViolations(DUMMY_VIOLATIONS)
-      }
+      setViolations((data as unknown as ViolationWithDetails[]) || [])
     } catch {
-      setViolations(DUMMY_VIOLATIONS)
+      setViolations([])
     } finally {
       setLoading(false)
     }

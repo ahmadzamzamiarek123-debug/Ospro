@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
-import { DUMMY_ATTENDANCE } from "@/lib/mockData"
 
 export async function POST(request: Request) {
   try {
@@ -22,33 +21,12 @@ export async function POST(request: Request) {
       notes: notes || "Presensi manual oleh operator meja laptop"
     }
 
-    try {
-      const { error } = await supabase
-        .from("attendance")
-        .upsert([attendanceRecord], { onConflict: "member_id,session_number" })
+    const { error } = await supabase
+      .from("attendance")
+      .upsert([attendanceRecord], { onConflict: "member_id,session_number" })
 
-      if (error) {
-        console.error("Gagal simpan manual presensi ke Supabase:", error)
-      }
-    } catch {
-      // fallback
-    }
-
-    // Update / tambahkan ke mock data
-    const existingIndex = DUMMY_ATTENDANCE.findIndex(
-      (a) => a.member_id === memberId && a.session_number === sessionNumber
-    )
-    if (existingIndex >= 0) {
-      DUMMY_ATTENDANCE[existingIndex] = {
-        ...DUMMY_ATTENDANCE[existingIndex],
-        ...attendanceRecord,
-        id: DUMMY_ATTENDANCE[existingIndex].id
-      }
-    } else {
-      DUMMY_ATTENDANCE.push({
-        id: `att-${Date.now()}`,
-        ...attendanceRecord
-      })
+    if (error) {
+      return NextResponse.json({ error: "Gagal menyimpan presensi manual: " + error.message }, { status: 500 })
     }
 
     return NextResponse.json({

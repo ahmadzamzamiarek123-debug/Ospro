@@ -11,49 +11,38 @@ import { Card, CardContent } from "@/components/ui/card"
 import { ChevronLeft, UserCircle, ShieldAlert, Clock } from "lucide-react"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
-import { DUMMY_MEMBERS, DUMMY_VIOLATIONS } from "@/lib/mockData"
-
 export default function MemberDetailPage() {
   const { id } = useParams()
   const router = useRouter()
-  const initialMember = DUMMY_MEMBERS.find(m => m.id === id) || null
-  const initialViolations = DUMMY_VIOLATIONS.filter(v => v.member_id === id)
 
-  const [member, setMember] = useState<Member | null>(() => initialMember)
-  const [violations, setViolations] = useState<ViolationWithDetails[]>(() => initialViolations)
-  const [loading, setLoading] = useState(() => !initialMember)
+  const [member, setMember] = useState<Member | null>(null)
+  const [violations, setViolations] = useState<ViolationWithDetails[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const supabase = createClient()
     async function fetchData() {
       try {
-        const memberQuery = supabase
+        const { data: memberData } = await supabase
           .from('members')
           .select('*')
           .eq('id', id)
           .single()
 
-        const violationsQuery = supabase
+        const { data: violationsData } = await supabase
           .from('violations')
           .select('*, recorded_by_user:users(name)')
           .eq('member_id', id)
           .order('created_at', { ascending: false })
 
-        const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 1200))
-
-        const res = await Promise.race([
-          Promise.all([memberQuery, violationsQuery]),
-          timeout
-        ]) as [{ data: Member | null }, { data: ViolationWithDetails[] | null }]
-
-        if (res && res[0]?.data) {
-          setMember(res[0].data)
+        if (memberData) {
+          setMember(memberData)
         }
-        if (res && res[1]?.data && res[1].data.length > 0) {
-          setViolations(res[1].data)
+        if (violationsData) {
+          setViolations(violationsData)
         }
       } catch {
-        // Gunakan fallback data
+        // ignore
       } finally {
         setLoading(false)
       }

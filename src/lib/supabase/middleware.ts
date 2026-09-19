@@ -61,21 +61,20 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  // Cek auth cookie supabase atau mock_user lokal
+  // Cek auth cookie supabase
   const hasAuthCookie = request.cookies.getAll().some(c => c.name.includes('auth-token'))
-  const hasMockUser = request.cookies.has('mock_user')
   const isDashboardRoute = request.nextUrl.pathname.startsWith('/dashboard')
 
   if (hasAuthCookie) {
     try {
       await supabase.auth.getUser()
     } catch {
-      // Offline fallback
+      // ignore
     }
   }
 
-  // Jika mencoba masuk /dashboard tanpa session supabase dan tanpa mock_user, baru redirect ke /masuk
-  if (isDashboardRoute && !hasAuthCookie && !hasMockUser) {
+  // Jika mencoba masuk /dashboard tanpa session supabase, redirect ke /masuk
+  if (isDashboardRoute && !hasAuthCookie) {
     const url = request.nextUrl.clone()
     url.pathname = '/masuk'
     return NextResponse.redirect(url)

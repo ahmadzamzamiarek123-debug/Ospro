@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
-import { DUMMY_MEMBERS, DUMMY_ATTENDANCE } from "@/lib/mockData"
 
 export async function GET(request: Request) {
   try {
@@ -48,21 +47,14 @@ export async function GET(request: Request) {
         timeoutPromise
       ])
 
-      if (membersRes?.data && membersRes.data.length > 0) {
+      if (membersRes?.data) {
         members = membersRes.data
       }
-      if (attendanceRes?.data && attendanceRes.data.length > 0) {
+      if (attendanceRes?.data) {
         attendances = attendanceRes.data
       }
     } catch {
-      // fallback
-    }
-
-    if (members.length === 0) {
-      members = DUMMY_MEMBERS
-    }
-    if (attendances.length === 0) {
-      attendances = DUMMY_ATTENDANCE.filter((a) => a.session_number === sessionNumber)
+      // ignore
     }
 
     // Petakan data peserta + status presensi

@@ -23,8 +23,6 @@ import {
 } from "@/components/ui/select"
 import { UserPlus } from "lucide-react"
 import { toast } from "sonner"
-import { DUMMY_MEMBERS } from "@/lib/mockData"
-
 export function AddMemberDialog({ onMemberAdded }: { onMemberAdded: () => void }) {
   const [open, setOpen] = useState(false)
   const [name, setName] = useState("")
@@ -54,14 +52,8 @@ export function AddMemberDialog({ onMemberAdded }: { onMemberAdded: () => void }
       })
 
       if (error) {
-        DUMMY_MEMBERS.push({
-          id: `m-${Date.now()}`,
-          name,
-          nim,
-          role,
-          kelompok: finalKelompok,
-          created_at: new Date().toISOString()
-        })
+        toast.error("Gagal menyimpan ke database Supabase: " + error.message)
+        return
       }
 
       toast.success(`${name} (${role === "panitia" ? finalKelompok : kelompok}) berhasil ditambahkan`)
@@ -71,22 +63,9 @@ export function AddMemberDialog({ onMemberAdded }: { onMemberAdded: () => void }
       setPanitiaRole("")
       setKelompok("Kelompok 1")
       onMemberAdded()
-    } catch {
-      DUMMY_MEMBERS.push({
-        id: `m-${Date.now()}`,
-        name,
-        nim,
-        role,
-        kelompok: finalKelompok,
-        created_at: new Date().toISOString()
-      })
-      toast.success(`${name} (${role === "panitia" ? finalKelompok : kelompok}) berhasil ditambahkan`)
-      setOpen(false)
-      setName("")
-      setNim("")
-      setPanitiaRole("")
-      setKelompok("Kelompok 1")
-      onMemberAdded()
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "Periksa koneksi"
+      toast.error("Gagal terhubung ke database: " + message)
     } finally {
       setIsLoading(false)
     }

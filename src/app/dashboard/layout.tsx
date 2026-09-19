@@ -1,5 +1,4 @@
 import { createClient } from "@/lib/supabase/server"
-import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 import { UserCircle } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -13,37 +12,20 @@ export default async function DashboardLayout({
   const supabase = createClient()
   const { data: { user } } = await supabase.auth.getUser()
 
-  const cookieStore = cookies()
-  const mockUserCookie = cookieStore.get('mock_user')?.value
-
-  let activeUser = user
-  let activeProfile: { name?: string } | null = null
-
-  if (user) {
-    try {
-      const { data: profile } = await supabase
-        .from('users')
-        .select('name')
-        .eq('id', user.id)
-        .single()
-      activeProfile = profile
-    } catch {
-      // ignore
-    }
-  }
-
-  if (!activeUser && mockUserCookie) {
-    try {
-      const parsed = JSON.parse(mockUserCookie)
-      activeUser = { id: parsed.id, email: parsed.email } as unknown as typeof user
-      activeProfile = { name: parsed.name }
-    } catch {
-      // ignore
-    }
-  }
-
-  if (!activeUser) {
+  if (!user) {
     redirect("/masuk")
+  }
+
+  let activeProfile: { name?: string } | null = null
+  try {
+    const { data: profile } = await supabase
+      .from('users')
+      .select('name')
+      .eq('id', user.id)
+      .single()
+    activeProfile = profile
+  } catch {
+    // ignore
   }
 
   return (

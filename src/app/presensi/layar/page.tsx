@@ -16,7 +16,6 @@ import {
 } from "lucide-react"
 import { toast } from "sonner"
 import Link from "next/link"
-import { DUMMY_MEMBERS, DUMMY_ATTENDANCE } from "@/lib/mockData"
 
 interface MemberAttendance {
   id: string
@@ -30,33 +29,6 @@ interface MemberAttendance {
   scannedAt: string | null
 }
 
-const getInitialAttendance = () => {
-  const attendanceMap = new Map(
-    DUMMY_ATTENDANCE.filter((a) => a.session_number === 1).map((a) => [a.member_id, a])
-  )
-  const initialList: MemberAttendance[] = DUMMY_MEMBERS.map((m) => {
-    const att = attendanceMap.get(m.id)
-    return {
-      id: m.id,
-      nim: m.nim,
-      name: m.name,
-      role: m.role,
-      kelompok: m.kelompok || (m.role === "panitia" ? "Panitia" : "Tanpa Kelompok"),
-      isAttended: !!att,
-      attendanceStatus: att?.status || null,
-      method: att?.method || null,
-      scannedAt: att?.scanned_at || null
-    }
-  })
-  return {
-    members: initialList,
-    totalPeserta: initialList.filter((m) => m.role === "peserta").length,
-    totalPesertaHadir: initialList.filter((m) => m.role === "peserta" && m.isAttended).length,
-    totalPanitia: initialList.filter((m) => m.role === "panitia").length,
-    totalPanitiaHadir: initialList.filter((m) => m.role === "panitia" && m.isAttended).length
-  }
-}
-
 export default function PresensiLayarPage() {
   const sessionNumber = 1
   const [token, setToken] = useState<string>("")
@@ -65,13 +37,12 @@ export default function PresensiLayarPage() {
   const [isFullscreen, setIsFullscreen] = useState(false)
   const [origin, setOrigin] = useState("")
 
-  // Data Kehadiran (Instan 0ms dengan data awal)
-  const [initialData] = useState(getInitialAttendance)
-  const [members, setMembers] = useState<MemberAttendance[]>(() => initialData.members)
-  const [totalPeserta, setTotalPeserta] = useState(() => initialData.totalPeserta)
-  const [totalPesertaHadir, setTotalPesertaHadir] = useState(() => initialData.totalPesertaHadir)
-  const [totalPanitia, setTotalPanitia] = useState(() => initialData.totalPanitia)
-  const [totalPanitiaHadir, setTotalPanitiaHadir] = useState(() => initialData.totalPanitiaHadir)
+  // Data Kehadiran
+  const [members, setMembers] = useState<MemberAttendance[]>([])
+  const [totalPeserta, setTotalPeserta] = useState(0)
+  const [totalPesertaHadir, setTotalPesertaHadir] = useState(0)
+  const [totalPanitia, setTotalPanitia] = useState(0)
+  const [totalPanitiaHadir, setTotalPanitiaHadir] = useState(0)
 
   const [searchQuery, setSearchQuery] = useState("")
   const [roleFilter, setRoleFilter] = useState<"semua" | "peserta" | "panitia">("semua")
