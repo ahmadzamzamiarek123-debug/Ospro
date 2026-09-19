@@ -6,7 +6,7 @@ import { Member, Session, User } from "@/types/database"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Search, UserCircle, Users, Award, Calendar, LogOut, ShieldCheck, Camera, QrCode, Ticket, ExternalLink } from "lucide-react"
+import { Search, UserCircle, Users, Award, Calendar, LogOut, ShieldCheck, Camera, QrCode, Ticket, ExternalLink, Monitor } from "lucide-react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { ViolationSheet } from "@/components/dashboard/violation-sheet"
@@ -128,41 +128,54 @@ export default function DashboardPage() {
         />
       </section>
 
-      {/* Quick Action Presensi Modes */}
-      <section className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      {/* Quick Action Presensi & Layar Modes */}
+      <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <Link href="/presensi/scanner" className="block">
-          <div className="p-4 rounded-xl bg-white border border-slate-200/80 shadow-xs hover:border-slate-400 transition-all">
-            <div className="flex items-center gap-2.5 mb-1.5">
+          <div className="p-3.5 rounded-xl bg-white border border-slate-200/80 shadow-xs hover:border-slate-400 transition-all">
+            <div className="flex items-center gap-2 mb-1">
               <Camera className="h-4 w-4 text-slate-700" />
-              <p className="font-bold text-sm text-slate-900">Scanner HP</p>
+              <p className="font-bold text-xs sm:text-sm text-slate-900">Scanner HP</p>
             </div>
-            <p className="text-xs text-slate-500">Scan barcode tiket peserta lewat kamera</p>
+            <p className="text-[11px] text-slate-500">Scan barcode tiket maba</p>
           </div>
         </Link>
 
         <Link href="/presensi/layar" target="_blank" className="block">
-          <div className="p-4 rounded-xl bg-white border border-slate-200/80 shadow-xs hover:border-slate-400 transition-all">
-            <div className="flex items-center justify-between mb-1.5">
-              <div className="flex items-center gap-2.5">
+          <div className="p-3.5 rounded-xl bg-white border border-slate-200/80 shadow-xs hover:border-slate-400 transition-all">
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-2">
                 <QrCode className="h-4 w-4 text-slate-700" />
-                <p className="font-bold text-sm text-slate-900">Layar Operator</p>
+                <p className="font-bold text-xs sm:text-sm text-slate-900">Layar Meja</p>
               </div>
-              <ExternalLink className="h-3.5 w-3.5 text-slate-400" />
+              <ExternalLink className="h-3 w-3 text-slate-400" />
             </div>
-            <p className="text-xs text-slate-500">Tampilan meja registrasi & input manual</p>
+            <p className="text-[11px] text-slate-500">Barcode meja registrasi</p>
+          </div>
+        </Link>
+
+        <Link href="/proyektor" target="_blank" className="block">
+          <div className="p-3.5 rounded-xl bg-white border border-slate-200/80 shadow-xs hover:border-slate-400 transition-all">
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-2">
+                <Monitor className="h-4 w-4 text-slate-700" />
+                <p className="font-bold text-xs sm:text-sm text-slate-900">Proyektor</p>
+              </div>
+              <ExternalLink className="h-3 w-3 text-slate-400" />
+            </div>
+            <p className="text-[11px] text-slate-500">Layar evaluasi aula depan</p>
           </div>
         </Link>
 
         <Link href="/tiket" target="_blank" className="block">
-          <div className="p-4 rounded-xl bg-white border border-slate-200/80 shadow-xs hover:border-slate-400 transition-all">
-            <div className="flex items-center justify-between mb-1.5">
-              <div className="flex items-center gap-2.5">
+          <div className="p-3.5 rounded-xl bg-white border border-slate-200/80 shadow-xs hover:border-slate-400 transition-all">
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-2">
                 <Ticket className="h-4 w-4 text-slate-700" />
-                <p className="font-bold text-sm text-slate-900">Tiket Peserta</p>
+                <p className="font-bold text-xs sm:text-sm text-slate-900">Tiket Maba</p>
               </div>
-              <ExternalLink className="h-3.5 w-3.5 text-slate-400" />
+              <ExternalLink className="h-3 w-3 text-slate-400" />
             </div>
-            <p className="text-xs text-slate-500">Link untuk mahasiswa melihat barcode</p>
+            <p className="text-[11px] text-slate-500">Link klaim tiket peserta</p>
           </div>
         </Link>
       </section>

@@ -61,9 +61,24 @@ export async function updateSession(request: NextRequest) {
     }
   )
 
-  // Cek auth cookie supabase
-  const hasAuthCookie = request.cookies.getAll().some(c => c.name.includes('auth-token'))
-  const isDashboardRoute = request.nextUrl.pathname.startsWith('/dashboard')
+  const pathname = request.nextUrl.pathname
+
+  // 1. Root domain ('/'): otomatis diarahkan ke '/tiket' untuk maba
+  if (pathname === '/') {
+    const redirectUrl = request.nextUrl.clone()
+    redirectUrl.pathname = '/tiket'
+    return NextResponse.redirect(redirectUrl)
+  }
+
+  // 2. Cek token sesi otentikasi login
+  const hasAuthCookie = request.cookies.getAll().some(c => c.name.includes('auth-token') || c.name.includes('sb-'))
+
+  // 3. Rute-rute internal Panitia yang WAJIB login
+  const isProtectedPanitiaRoute = 
+    pathname.startsWith('/dashboard') || 
+    pathname.startsWith('/presensi') || 
+    pathname.startsWith('/proyektor') ||
+    pathname.startsWith('/member/')
 
   if (hasAuthCookie) {
     try {
@@ -73,11 +88,11 @@ export async function updateSession(request: NextRequest) {
     }
   }
 
-  // Jika mencoba masuk /dashboard tanpa session supabase, redirect ke /masuk
-  if (isDashboardRoute && !hasAuthCookie) {
-    const url = request.nextUrl.clone()
-    url.pathname = '/masuk'
-    return NextResponse.redirect(url)
+  // 4. Jika maba / pengunjung belum login mencoba buka rute panitia, seketika tendang ke /masuk
+  if (isProtectedPanitiaRoute && !hasAuthCookie) {
+    const loginUrl = request.nextUrl.clone()
+    loginUrl.pathname = '/masuk'
+    return NextResponse.redirect(loginUrl)
   }
 
   return response
