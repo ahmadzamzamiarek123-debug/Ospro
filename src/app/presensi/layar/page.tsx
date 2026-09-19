@@ -16,12 +16,20 @@ import {
   Users, 
   UserCheck, 
   UserX,
-  Radio,
+  AlertTriangle,
   QrCode,
-  Sparkles
+  X,
+  ShieldAlert
 } from "lucide-react"
 import { toast } from "sonner"
 import Link from "next/link"
+
+interface SlotAttendance {
+  isAttended: boolean
+  scannedAt: string | null
+  status: string | null
+  method: string | null
+}
 
 interface MemberAttendance {
   id: string
@@ -33,6 +41,9 @@ interface MemberAttendance {
   attendanceStatus: string | null
   method: string | null
   scannedAt: string | null
+  awal: SlotAttendance
+  akhir: SlotAttendance
+  kehadiranState: "lengkap" | "hanya_awal" | "hanya_akhir" | "alpha"
 }
 
 export default function PresensiLayarPage() {
@@ -44,18 +55,23 @@ export default function PresensiLayarPage() {
   // Data Kehadiran
   const [members, setMembers] = useState<MemberAttendance[]>([])
   const [totalPeserta, setTotalPeserta] = useState(0)
-  const [totalPesertaHadir, setTotalPesertaHadir] = useState(0)
-  const [totalPanitia, setTotalPanitia] = useState(0)
-  const [totalPanitiaHadir, setTotalPanitiaHadir] = useState(0)
+  const [totalAwal, setTotalAwal] = useState(0)
+  const [totalAkhir, setTotalAkhir] = useState(0)
+  const [totalLengkap, setTotalLengkap] = useState(0)
+  const [totalHanyaAwal, setTotalHanyaAwal] = useState(0)
+  const [totalBelumHadir, setTotalBelumHadir] = useState(0)
   const [totalSemua, setTotalSemua] = useState(0)
-  const [totalHadir, setTotalHadir] = useState(0)
 
-  // Filter State (Default fokus ke yang sudah hadir sesuai instruksi)
+  // Filter State
   const [searchQuery, setSearchQuery] = useState("")
-  const [statusFilter, setStatusFilter] = useState<"hadir" | "belum" | "semua">("hadir")
+  const [statusFilter, setStatusFilter] = useState<"semua" | "lengkap" | "hanya_awal" | "belum">("semua")
   const [roleFilter, setRoleFilter] = useState<"semua" | "peserta" | "panitia">("semua")
   const [kelompokFilter, setKelompokFilter] = useState<string>("semua")
-  const [isSubmittingManual, setIsSubmittingManual] = useState<string | null>(null)
+
+  // Modal Manual Absen
+  const [selectedMemberForManual, setSelectedMemberForManual] = useState<MemberAttendance | null>(null)
+  const [manualSlot, setManualSlot] = useState<"awal" | "akhir" | "both">("awal")
+  const [isSubmittingManual, setIsSubmittingManual] = useState<boolean>(false)
 
   // Polling & Realtime Data Kehadiran
   const fetchAttendanceList = useCallback(async (isSilent = false) => {
@@ -66,11 +82,12 @@ export default function PresensiLayarPage() {
       if (data.success) {
         setMembers(data.members || [])
         setTotalPeserta(data.totalPeserta || 0)
-        setTotalPesertaHadir(data.totalPesertaHadir || 0)
-        setTotalPanitia(data.totalPanitia || 0)
-        setTotalPanitiaHadir(data.totalPanitiaHadir || 0)
+        setTotalAwal(data.totalAwal || 0)
+        setTotalAkhir(data.totalAkhir || 0)
+        setTotalLengkap(data.totalLengkap || 0)
+        setTotalHanyaAwal(data.totalHanyaAwal || 0)
+        setTotalBelumHadir(data.totalBelumHadir || 0)
         setTotalSemua(data.totalSemua || 0)
-        setTotalHadir(data.totalHadir || 0)
         setLastSyncTime(new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit", second: "2-digit" }))
       }
     } catch {
@@ -89,7 +106,7 @@ export default function PresensiLayarPage() {
     return () => clearInterval(interval)
   }, [fetchAttendanceList])
 
-  // Supabase Realtime WebSocket Connection (Instant Update saat HP Scan Tiket)
+  // Supabase Realtime WebSocket Connection
   useEffect(() => {
     const supabase = createClient()
     const channel = supabase
@@ -118,29 +135,32 @@ export default function PresensiLayarPage() {
   }
 
   // Absenkan Manual langsung dari Laptop
-  const handleManualAbsen = async (member: MemberAttendance) => {
-    setIsSubmittingManual(member.id)
+  const handleSaveManual = async () => {
+    if (!selectedMemberForManual) return
+    setIsSubmittingManual(true)
     try {
       const res = await fetch("/api/attendance/manual", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          memberId: member.id,
+          memberId: selectedMemberForManual.id,
           sessionNumber,
+          slot: manualSlot,
           status: "hadir"
         })
       })
       const data = await res.json()
       if (res.ok) {
-        toast.success(`${member.name} berhasil diabsenkan!`)
+        toast.success(`Presensi manual ${selectedMemberForManual.name} berhasil disimpan!`)
+        setSelectedMemberForManual(null)
         fetchAttendanceList()
       } else {
-        toast.error(data.error || "Gagal mengabsenkan")
+        toast.error(data.error || "Gagal menyimpan presensi manual")
       }
     } catch {
       toast.error("Terjadi kesalahan jaringan")
     } finally {
-      setIsSubmittingManual(null)
+      setIsSubmittingManual(false)
     }
   }
 
@@ -183,21 +203,27 @@ export default function PresensiLayarPage() {
       if (!matchSearch) return false
       if (roleFilter !== "semua" && m.role !== roleFilter) return false
       if (kelompokFilter !== "semua" && m.kelompok !== kelompokFilter) return false
-      if (statusFilter === "hadir") return m.isAttended
-      if (statusFilter === "belum") return !m.isAttended
+
+      if (statusFilter === "lengkap") return m.kehadiranState === "lengkap"
+      if (statusFilter === "hanya_awal") return m.kehadiranState === "hanya_awal"
+      if (statusFilter === "belum") return m.kehadiranState === "alpha"
       return true
     })
-    // Urutkan: Yang baru hadir paling atas jika di filter hadir/semua
     .sort((a, b) => {
-      if (statusFilter === "hadir" || statusFilter === "semua") {
-        if (a.isAttended && b.isAttended) {
-          const timeA = a.scannedAt ? new Date(a.scannedAt).getTime() : 0
-          const timeB = b.scannedAt ? new Date(b.scannedAt).getTime() : 0
-          return timeB - timeA
-        }
-        if (a.isAttended && !b.isAttended) return -1
-        if (!a.isAttended && b.isAttended) return 1
+      // Prioritaskan yang hanya_awal jika sedang di filter waspada
+      if (statusFilter === "hanya_awal") {
+        return a.name.localeCompare(b.name)
       }
+      // Default: Urutkan yang terbaru scan di atas
+      const timeA = Math.max(
+        a.akhir?.scannedAt ? new Date(a.akhir.scannedAt).getTime() : 0,
+        a.awal?.scannedAt ? new Date(a.awal.scannedAt).getTime() : 0
+      )
+      const timeB = Math.max(
+        b.akhir?.scannedAt ? new Date(b.akhir.scannedAt).getTime() : 0,
+        b.awal?.scannedAt ? new Date(b.awal.scannedAt).getTime() : 0
+      )
+      if (timeA !== timeB) return timeB - timeA
       return a.name.localeCompare(b.name)
     })
 
@@ -205,8 +231,6 @@ export default function PresensiLayarPage() {
   const uniqueKelompok = Array.from(
     new Set(members.filter((m) => m.role === "peserta").map((m) => m.kelompok))
   ).filter(Boolean).sort()
-
-  const persentaseHadir = totalPeserta > 0 ? Math.round((totalPesertaHadir / totalPeserta) * 100) : 0
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans select-none">
@@ -221,7 +245,7 @@ export default function PresensiLayarPage() {
             </Link>
             <div className="h-4 w-px bg-slate-200 hidden sm:block" />
             <div className="hidden sm:flex items-center gap-2">
-              <span className="text-xs font-bold text-slate-600">Monitor Hadir (Laptop)</span>
+              <span className="text-xs font-bold text-slate-700">Monitor Presensi Sesi</span>
               <span className="inline-flex items-center gap-1 text-[11px] font-mono font-medium text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
                 Live Sync
@@ -278,15 +302,27 @@ export default function PresensiLayarPage() {
               <span className="hidden md:inline">{isFullscreen ? "Keluar" : "Fullscreen"}</span>
             </Button>
 
+            {/* Link HP Scanner */}
+            <Link href="/presensi/scanner">
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="h-9 px-3 rounded-xl border-slate-200 bg-slate-900 text-white hover:bg-black text-xs font-semibold gap-1.5 shadow-2xs"
+                title="Buka Kamera Scanner"
+              >
+                <QrCode className="h-3.5 w-3.5" />
+                <span className="hidden md:inline">HP Scanner</span>
+              </Button>
+            </Link>
+
             {/* Kembali ke Dashboard */}
             <Link href="/dashboard">
               <Button 
                 variant="ghost" 
                 size="sm" 
-                className="h-9 px-2.5 text-xs font-semibold text-slate-500 hover:text-slate-900 rounded-xl"
+                className="h-9 px-2 text-xs font-semibold text-slate-500 hover:text-slate-900 rounded-xl"
               >
-                <ArrowLeft className="h-4 w-4 mr-1" />
-                <span className="hidden sm:inline">Menu</span>
+                <ArrowLeft className="h-4 w-4" />
               </Button>
             </Link>
           </div>
@@ -295,80 +331,99 @@ export default function PresensiLayarPage() {
 
       {/* Main Content */}
       <main className="flex-1 container max-w-7xl mx-auto p-4 sm:p-6 space-y-5">
-        {/* Ringkasan Statistik Real-Time */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
-          {/* Card 1: Total Peserta Hadir */}
-          <Card className="border border-slate-200/80 shadow-xs rounded-2xl bg-white p-4 space-y-2">
+        {/* Ringkasan Statistik 2 Fase Presensi */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+          {/* Card 1: Presensi Awal */}
+          <Card className="border border-slate-200/80 shadow-xs rounded-2xl bg-white p-4 space-y-1.5">
             <div className="flex items-center justify-between text-xs text-slate-500">
-              <span className="font-semibold uppercase tracking-wider text-[10px]">Peserta Hadir Sesi {sessionNumber}</span>
-              <UserCheck className="h-4 w-4 text-emerald-600" />
+              <span className="font-semibold uppercase tracking-wider text-[10px]">1. Presensi Awal</span>
+              <span className="h-2 w-2 rounded-full bg-emerald-500" />
             </div>
-            <div className="flex items-baseline justify-between">
+            <div className="flex items-baseline justify-between pt-1">
               <span className="text-2xl sm:text-3xl font-black font-mono text-slate-900 tracking-tight">
-                {totalPesertaHadir}
+                {totalAwal}
                 <span className="text-sm font-normal text-slate-400 ml-1">/ {totalPeserta}</span>
               </span>
-              <span className="text-xs font-bold font-mono text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-lg">
-                {persentaseHadir}%
+              <span className="text-xs font-bold font-mono text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200/60">
+                {totalPeserta > 0 ? Math.round((totalAwal / totalPeserta) * 100) : 0}%
               </span>
             </div>
-            {/* Progress bar halus */}
-            <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-              <div 
-                className="bg-emerald-500 h-full rounded-full transition-all duration-500"
-                style={{ width: `${persentaseHadir}%` }}
-              />
-            </div>
+            <p className="text-[11px] text-slate-400">Kedatangan awal sesi</p>
           </Card>
 
-          {/* Card 2: Peserta Belum Hadir */}
+          {/* Card 2: Presensi Akhir */}
           <Card className="border border-slate-200/80 shadow-xs rounded-2xl bg-white p-4 space-y-1.5">
             <div className="flex items-center justify-between text-xs text-slate-500">
-              <span className="font-semibold uppercase tracking-wider text-[10px]">Belum Hadir</span>
-              <UserX className="h-4 w-4 text-amber-500" />
+              <span className="font-semibold uppercase tracking-wider text-[10px]">2. Presensi Akhir</span>
+              <span className="h-2 w-2 rounded-full bg-blue-500" />
             </div>
             <div className="flex items-baseline justify-between pt-1">
-              <span className="text-2xl sm:text-3xl font-black font-mono text-slate-800 tracking-tight">
-                {totalPeserta - totalPesertaHadir}
-                <span className="text-xs font-normal text-slate-400 ml-1">Maba</span>
+              <span className="text-2xl sm:text-3xl font-black font-mono text-slate-900 tracking-tight">
+                {totalAkhir}
+                <span className="text-sm font-normal text-slate-400 ml-1">/ {totalPeserta}</span>
               </span>
-              <span className="text-[11px] font-medium text-slate-500">
-                Standby
+              <span className="text-xs font-bold font-mono text-blue-700 bg-blue-50 px-2 py-0.5 rounded-lg border border-blue-200/60">
+                {totalPeserta > 0 ? Math.round((totalAkhir / totalPeserta) * 100) : 0}%
               </span>
             </div>
-            <p className="text-[11px] text-slate-400">Siap di-scan barcode tiketnya</p>
+            <p className="text-[11px] text-slate-400">Kepulangan / akhir sesi</p>
           </Card>
 
-          {/* Card 3: Panitia Hadir */}
+          {/* Card 3: Kehadiran Lengkap */}
           <Card className="border border-slate-200/80 shadow-xs rounded-2xl bg-white p-4 space-y-1.5">
             <div className="flex items-center justify-between text-xs text-slate-500">
-              <span className="font-semibold uppercase tracking-wider text-[10px]">Panitia Hadir</span>
-              <Users className="h-4 w-4 text-blue-600" />
+              <span className="font-semibold uppercase tracking-wider text-[10px]">Hadir Lengkap</span>
+              <UserCheck className="h-4 w-4 text-emerald-600" />
             </div>
             <div className="flex items-baseline justify-between pt-1">
-              <span className="text-2xl sm:text-3xl font-black font-mono text-slate-800 tracking-tight">
-                {totalPanitiaHadir}
-                <span className="text-sm font-normal text-slate-400 ml-1">/ {totalPanitia}</span>
+              <span className="text-2xl sm:text-3xl font-black font-mono text-slate-900 tracking-tight">
+                {totalLengkap}
+                <span className="text-sm font-normal text-slate-400 ml-1">/ {totalPeserta}</span>
               </span>
-              <span className="text-xs font-bold font-mono text-blue-600 bg-blue-50 px-2 py-0.5 rounded-lg">
-                {totalPanitia > 0 ? Math.round((totalPanitiaHadir / totalPanitia) * 100) : 0}%
+              <span className="text-xs font-bold font-mono text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200/60">
+                {totalPeserta > 0 ? Math.round((totalLengkap / totalPeserta) * 100) : 0}%
               </span>
             </div>
-            <p className="text-[11px] text-slate-400">Panitia pelaksana bertugas</p>
+            <p className="text-[11px] text-slate-400">Hadir di kedua fase</p>
           </Card>
 
-          {/* Card 4: Status Monitor Real-Time */}
-          <Card className="border border-slate-200/80 shadow-xs rounded-2xl bg-white p-4 space-y-1.5">
-            <div className="flex items-center justify-between text-xs text-slate-500">
-              <span className="font-semibold uppercase tracking-wider text-[10px]">Live Scanner Status</span>
-              <Radio className="h-4 w-4 text-emerald-500 animate-pulse" />
+          {/* Card 4: Waspada - Belum Presensi Akhir */}
+          <Card className={`border shadow-xs rounded-2xl p-4 space-y-1.5 transition-all ${
+            totalHanyaAwal > 0 
+              ? "bg-amber-50/70 border-amber-300" 
+              : "bg-white border-slate-200/80"
+          }`}>
+            <div className="flex items-center justify-between text-xs">
+              <span className={`font-semibold uppercase tracking-wider text-[10px] ${
+                totalHanyaAwal > 0 ? "text-amber-800" : "text-slate-500"
+              }`}>
+                Belum Presensi Akhir
+              </span>
+              {totalHanyaAwal > 0 ? (
+                <ShieldAlert className="h-4 w-4 text-amber-600 animate-bounce" />
+              ) : (
+                <Check className="h-4 w-4 text-emerald-600" />
+              )}
             </div>
-            <div className="flex items-center gap-2 pt-1">
-              <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-ping" />
-              <span className="text-sm font-bold text-slate-900">HP Scanner Aktif</span>
+            <div className="flex items-baseline justify-between pt-1">
+              <span className={`text-2xl sm:text-3xl font-black font-mono tracking-tight ${
+                totalHanyaAwal > 0 ? "text-amber-900" : "text-slate-800"
+              }`}>
+                {totalHanyaAwal}
+                <span className="text-xs font-normal text-slate-400 ml-1">Peserta</span>
+              </span>
+              {totalHanyaAwal > 0 ? (
+                <span className="text-xs font-bold font-mono text-amber-900 bg-amber-200/80 px-2 py-0.5 rounded-lg">
+                  Pantau
+                </span>
+              ) : (
+                <span className="text-xs font-bold font-mono text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-lg">
+                  Aman
+                </span>
+              )}
             </div>
-            <p className="text-[11px] font-mono text-slate-400">
-              Sinkron terakhir: {lastSyncTime || "Baru saja"}
+            <p className={`text-[11px] ${totalHanyaAwal > 0 ? "text-amber-800 font-medium" : "text-slate-400"}`}>
+              {totalHanyaAwal > 0 ? "Hadir awal tapi belum absen akhir" : "Semua yang datang sudah absen akhir"}
             </p>
           </Card>
         </div>
@@ -387,30 +442,8 @@ export default function PresensiLayarPage() {
               />
             </div>
 
-            {/* Filter Status (Hadir / Belum / Semua) */}
+            {/* Filter Status Presensi */}
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0">
-              <button
-                onClick={() => setStatusFilter("hadir")}
-                className={`px-3.5 py-1.5 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 ${
-                  statusFilter === "hadir"
-                    ? "bg-slate-900 text-white shadow-xs"
-                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                }`}
-              >
-                <UserCheck className="h-3.5 w-3.5 text-emerald-400" />
-                Sudah Masuk ({totalHadir})
-              </button>
-              <button
-                onClick={() => setStatusFilter("belum")}
-                className={`px-3.5 py-1.5 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 ${
-                  statusFilter === "belum"
-                    ? "bg-slate-900 text-white shadow-xs"
-                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                }`}
-              >
-                <UserX className="h-3.5 w-3.5 text-amber-400" />
-                Belum Hadir ({totalSemua - totalHadir})
-              </button>
               <button
                 onClick={() => setStatusFilter("semua")}
                 className={`px-3.5 py-1.5 text-xs font-bold rounded-xl transition-all ${
@@ -420,6 +453,42 @@ export default function PresensiLayarPage() {
                 }`}
               >
                 Semua ({totalSemua})
+              </button>
+
+              <button
+                onClick={() => setStatusFilter("lengkap")}
+                className={`px-3.5 py-1.5 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 ${
+                  statusFilter === "lengkap"
+                    ? "bg-emerald-600 text-white shadow-xs"
+                    : "bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200/60"
+                }`}
+              >
+                <Check className="h-3.5 w-3.5" />
+                Lengkap ({totalLengkap})
+              </button>
+
+              <button
+                onClick={() => setStatusFilter("hanya_awal")}
+                className={`px-3.5 py-1.5 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 ${
+                  statusFilter === "hanya_awal"
+                    ? "bg-amber-600 text-white shadow-xs"
+                    : "bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200/60"
+                }`}
+              >
+                <AlertTriangle className="h-3.5 w-3.5" />
+                Belum Akhir ({totalHanyaAwal})
+              </button>
+
+              <button
+                onClick={() => setStatusFilter("belum")}
+                className={`px-3.5 py-1.5 text-xs font-bold rounded-xl transition-all flex items-center gap-1.5 ${
+                  statusFilter === "belum"
+                    ? "bg-red-600 text-white shadow-xs"
+                    : "bg-red-50 text-red-700 hover:bg-red-100 border border-red-200/60"
+                }`}
+              >
+                <UserX className="h-3.5 w-3.5" />
+                Alpha ({totalBelumHadir})
               </button>
             </div>
           </div>
@@ -451,7 +520,7 @@ export default function PresensiLayarPage() {
                   roleFilter === "panitia" ? "bg-slate-200 text-slate-900 font-bold" : "text-slate-500 hover:text-slate-900"
                 }`}
               >
-                Panitia ({totalPanitia})
+                Panitia ({totalSemua - totalPeserta})
               </button>
             </div>
 
@@ -479,20 +548,20 @@ export default function PresensiLayarPage() {
           <div className="p-4 border-b border-slate-100 flex items-center justify-between">
             <div className="space-y-0.5">
               <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                <span>Daftar Kehadiran</span>
+                <span>Daftar Kehadiran Sesi {sessionNumber}</span>
                 <span className="text-xs font-mono font-normal text-slate-400">
                   (Menampilkan {filteredMembers.length} data)
                 </span>
               </h2>
               <p className="text-[11px] text-slate-500">
-                Data masuk otomatis secara real-time saat panitia men-scan barcode tiket di pintu masuk.
+                Menampilkan waktu scan Presensi Awal & Presensi Akhir secara berdampingan.
               </p>
             </div>
 
             {/* Petunjuk Live */}
             <div className="flex items-center gap-1.5 text-[11px] text-slate-400 font-medium">
               <Clock className="h-3.5 w-3.5" />
-              <span>Urutan waktu scan terbaru</span>
+              <span>Sinkron: {lastSyncTime || "Baru saja"}</span>
             </div>
           </div>
 
@@ -500,110 +569,150 @@ export default function PresensiLayarPage() {
             <table className="w-full text-left text-xs">
               <thead className="bg-slate-50/80 text-[11px] font-bold text-slate-500 uppercase tracking-wider border-b border-slate-100">
                 <tr>
-                  <th className="py-3 px-4">Waktu Hadir</th>
-                  <th className="py-3 px-4">Nama Peserta / Panitia</th>
-                  <th className="py-3 px-4">NIM</th>
-                  <th className="py-3 px-4">Kelompok / Divisi</th>
-                  <th className="py-3 px-4">Metode Presensi</th>
-                  <th className="py-3 px-4 text-right">Status / Aksi</th>
+                  <th className="py-3 px-4 w-12 text-center">No</th>
+                  <th className="py-3 px-4">Nama Mahasiswa / Panitia</th>
+                  <th className="py-3 px-4">Kelompok</th>
+                  <th className="py-3 px-4">1. Presensi Awal</th>
+                  <th className="py-3 px-4">2. Presensi Akhir</th>
+                  <th className="py-3 px-4">Status Rekap</th>
+                  <th className="py-3 px-4 text-right">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium">
                 {filteredMembers.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-16 text-center text-slate-400">
+                    <td colSpan={7} className="py-16 text-center text-slate-400">
                       <div className="flex flex-col items-center justify-center space-y-2">
                         <Users className="h-8 w-8 text-slate-300" />
-                        <p className="text-xs font-semibold">Tidak ada data kehadiran yang sesuai filter.</p>
-                        <p className="text-[11px] text-slate-400">
-                          {statusFilter === "hadir" 
-                            ? "Belum ada peserta yang di-scan pada sesi ini. Mulai scan tiket menggunakan HP scanner panitia!"
-                            : "Coba ubah kata kunci pencarian atau reset filter."}
-                        </p>
+                        <p className="text-xs font-semibold">Tidak ada data peserta yang cocok dengan filter.</p>
                       </div>
                     </td>
                   </tr>
                 ) : (
-                  filteredMembers.map((m) => {
-                    const isNew = isRecentScan(m.scannedAt)
+                  filteredMembers.map((m, idx) => {
+                    const isNewAwal = isRecentScan(m.awal?.scannedAt)
+                    const isNewAkhir = isRecentScan(m.akhir?.scannedAt)
+
                     return (
                       <tr 
                         key={m.id}
                         className={`hover:bg-slate-50/80 transition-colors ${
-                          isNew ? "bg-emerald-50/40" : ""
+                          m.kehadiranState === "hanya_awal" ? "bg-amber-50/20" : ""
                         }`}
                       >
-                        {/* Waktu Masuk */}
-                        <td className="py-3 px-4 font-mono text-slate-700 whitespace-nowrap">
-                          {m.isAttended ? (
-                            <div className="flex items-center gap-1.5">
-                              <span className="font-bold text-slate-900">{formatTime(m.scannedAt)}</span>
-                              {isNew && (
-                                <span className="inline-flex items-center gap-0.5 text-[9px] font-bold uppercase bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded animate-pulse">
-                                  <Sparkles className="h-2.5 w-2.5" /> Baru
-                                </span>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-slate-400 italic">Belum hadir</span>
-                          )}
+                        {/* No */}
+                        <td className="py-3 px-4 text-center font-mono text-slate-400 text-[11px]">
+                          {idx + 1}
                         </td>
 
-                        {/* Nama */}
+                        {/* Nama & NIM */}
                         <td className="py-3 px-4">
                           <div className="space-y-0.5">
                             <span className="font-bold text-slate-900 text-sm block">{m.name}</span>
-                            <span className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">
-                              {m.role === "panitia" ? "Panitia" : "Mahasiswa Baru"}
-                            </span>
+                            <div className="flex items-center gap-1.5 text-[11px] font-mono text-slate-500">
+                              <span>{m.nim}</span>
+                              <span className="text-slate-300">•</span>
+                              <span className="text-[10px] text-slate-400 uppercase font-semibold">
+                                {m.role === "panitia" ? "Panitia" : "Peserta"}
+                              </span>
+                            </div>
                           </div>
                         </td>
 
-                        {/* NIM */}
-                        <td className="py-3 px-4 font-mono font-bold text-slate-600">
-                          {m.nim}
-                        </td>
-
                         {/* Kelompok */}
-                        <td className="py-3 px-4">
+                        <td className="py-3 px-4 whitespace-nowrap">
                           <span className="inline-block px-2 py-0.5 rounded-md bg-slate-100 text-slate-800 font-bold font-mono text-[11px]">
                             {m.kelompok}
                           </span>
                         </td>
 
-                        {/* Metode Scan */}
+                        {/* 1. Presensi Awal */}
                         <td className="py-3 px-4 whitespace-nowrap">
-                          {m.isAttended ? (
-                            m.method === "qr_scan" ? (
-                              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
-                                <QrCode className="h-3 w-3 text-slate-500" /> Scanner HP
+                          {m.awal?.isAttended ? (
+                            <div className="space-y-0.5">
+                              <div className="flex items-center gap-1 text-emerald-700 font-bold font-mono text-xs">
+                                <Check className="h-3.5 w-3.5 text-emerald-600" />
+                                <span>{formatTime(m.awal.scannedAt)}</span>
+                                {isNewAwal && (
+                                  <span className="text-[9px] uppercase bg-emerald-100 text-emerald-800 px-1 rounded animate-pulse">
+                                    Baru
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-[10px] text-slate-400 block font-mono">
+                                {m.awal.method === "qr_scan" ? "Scan HP" : "Manual"}
                               </span>
-                            ) : (
-                              <span className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-700 bg-blue-50 px-2 py-0.5 rounded-md">
-                                Operator Laptop
-                              </span>
-                            )
+                            </div>
                           ) : (
-                            <span className="text-slate-400 text-[11px]">-</span>
+                            <span className="text-slate-400 italic text-[11px]">- Belum -</span>
                           )}
                         </td>
 
-                        {/* Status / Aksi */}
-                        <td className="py-3 px-4 text-right whitespace-nowrap">
-                          {m.isAttended ? (
-                            <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200/80">
-                              <Check className="h-3.5 w-3.5 text-emerald-600" /> Hadir
-                            </span>
+                        {/* 2. Presensi Akhir */}
+                        <td className="py-3 px-4 whitespace-nowrap">
+                          {m.akhir?.isAttended ? (
+                            <div className="space-y-0.5">
+                              <div className="flex items-center gap-1 text-blue-700 font-bold font-mono text-xs">
+                                <Check className="h-3.5 w-3.5 text-blue-600" />
+                                <span>{formatTime(m.akhir.scannedAt)}</span>
+                                {isNewAkhir && (
+                                  <span className="text-[9px] uppercase bg-blue-100 text-blue-800 px-1 rounded animate-pulse">
+                                    Baru
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-[10px] text-slate-400 block font-mono">
+                                {m.akhir.method === "qr_scan" ? "Scan HP" : "Manual"}
+                              </span>
+                            </div>
                           ) : (
-                            <Button
-                              size="sm"
-                              onClick={() => handleManualAbsen(m)}
-                              disabled={isSubmittingManual === m.id}
-                              className="h-8 rounded-xl bg-slate-900 hover:bg-black font-semibold text-xs px-3 text-white shadow-2xs transition-all active:scale-95"
-                            >
-                              {isSubmittingManual === m.id ? "..." : "Absenkan Manual"}
-                            </Button>
+                            <span className="text-slate-400 italic text-[11px]">- Belum -</span>
                           )}
+                        </td>
+
+                        {/* Status Rekap */}
+                        <td className="py-3 px-4 whitespace-nowrap">
+                          {m.kehadiranState === "lengkap" && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                              <Check className="h-3.5 w-3.5 text-emerald-600" /> Hadir Lengkap
+                            </span>
+                          )}
+                          {m.kehadiranState === "hanya_awal" && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-amber-50 text-amber-800 border border-amber-300">
+                              <AlertTriangle className="h-3.5 w-3.5 text-amber-600" /> Belum Presensi Akhir
+                            </span>
+                          )}
+                          {m.kehadiranState === "hanya_akhir" && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-50 text-blue-700 border border-blue-200">
+                              Susulan Akhir
+                            </span>
+                          )}
+                          {m.kehadiranState === "alpha" && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-400 bg-slate-100">
+                              Alpha
+                            </span>
+                          )}
+                        </td>
+
+                        {/* Aksi Manual */}
+                        <td className="py-3 px-4 text-right whitespace-nowrap">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setSelectedMemberForManual(m)
+                              setManualSlot(
+                                !m.awal?.isAttended && !m.akhir?.isAttended
+                                  ? "both"
+                                  : !m.awal?.isAttended
+                                  ? "awal"
+                                  : "akhir"
+                              )
+                            }}
+                            className="h-8 rounded-xl border-slate-200 text-slate-700 hover:bg-slate-100 text-xs font-semibold"
+                          >
+                            Ubah / Absen Manual
+                          </Button>
                         </td>
                       </tr>
                     )
@@ -617,8 +726,117 @@ export default function PresensiLayarPage() {
 
       {/* Footer Minimalist */}
       <footer className="text-center py-4 text-[10px] font-mono text-slate-400 border-t border-slate-200/80 bg-white">
-        OSI 2026 • Layar Monitor Presensi Real-Time
+        OSI 2026 • Layar Monitor Presensi Real-Time (Presensi Awal & Presensi Akhir)
       </footer>
+
+      {/* Modal Dialog Absen Manual */}
+      {selectedMemberForManual && (
+        <div 
+          className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150"
+          onClick={() => setSelectedMemberForManual(null)}
+        >
+          <div 
+            className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4 animate-in zoom-in-95 duration-150 relative"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setSelectedMemberForManual(null)}
+              className="absolute top-4 right-4 h-8 w-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 flex items-center justify-center transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+
+            <div className="space-y-1">
+              <span className="text-[10px] font-mono uppercase tracking-wider text-slate-400 font-bold">
+                Presensi Manual Operator • Sesi {sessionNumber}
+              </span>
+              <h3 className="text-base font-bold text-slate-900">
+                {selectedMemberForManual.name}
+              </h3>
+              <p className="text-xs font-mono text-slate-500">
+                {selectedMemberForManual.nim} • {selectedMemberForManual.kelompok}
+              </p>
+            </div>
+
+            <div className="p-3 bg-slate-50 rounded-2xl border border-slate-100 space-y-2 text-xs">
+              <span className="font-semibold text-slate-600 block">Status Saat Ini:</span>
+              <div className="grid grid-cols-2 gap-2 font-mono">
+                <div className="p-2 rounded-xl bg-white border border-slate-200">
+                  <span className="text-[10px] text-slate-400 block">Presensi Awal:</span>
+                  <span className={`font-bold ${selectedMemberForManual.awal?.isAttended ? "text-emerald-600" : "text-slate-400"}`}>
+                    {selectedMemberForManual.awal?.isAttended ? formatTime(selectedMemberForManual.awal.scannedAt) : "Belum"}
+                  </span>
+                </div>
+                <div className="p-2 rounded-xl bg-white border border-slate-200">
+                  <span className="text-[10px] text-slate-400 block">Presensi Akhir:</span>
+                  <span className={`font-bold ${selectedMemberForManual.akhir?.isAttended ? "text-blue-600" : "text-slate-400"}`}>
+                    {selectedMemberForManual.akhir?.isAttended ? formatTime(selectedMemberForManual.akhir.scannedAt) : "Belum"}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-700 block">
+                Pilih Presensi yang Ingin Dicatat:
+              </label>
+              <div className="grid grid-cols-3 gap-2">
+                <button
+                  type="button"
+                  onClick={() => setManualSlot("awal")}
+                  className={`py-2.5 px-2 rounded-xl text-xs font-bold border transition-all text-center ${
+                    manualSlot === "awal"
+                      ? "bg-emerald-600 text-white border-emerald-600 shadow-xs"
+                      : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                  }`}
+                >
+                  Presensi Awal
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setManualSlot("akhir")}
+                  className={`py-2.5 px-2 rounded-xl text-xs font-bold border transition-all text-center ${
+                    manualSlot === "akhir"
+                      ? "bg-blue-600 text-white border-blue-600 shadow-xs"
+                      : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                  }`}
+                >
+                  Presensi Akhir
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setManualSlot("both")}
+                  className={`py-2.5 px-2 rounded-xl text-xs font-bold border transition-all text-center ${
+                    manualSlot === "both"
+                      ? "bg-slate-900 text-white border-slate-900 shadow-xs"
+                      : "bg-white text-slate-700 border-slate-200 hover:bg-slate-50"
+                  }`}
+                >
+                  Keduanya
+                </button>
+              </div>
+            </div>
+
+            <div className="pt-2 flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setSelectedMemberForManual(null)}
+                className="flex-1 h-10 rounded-xl border-slate-200 text-xs font-semibold"
+              >
+                Batal
+              </Button>
+              <Button
+                onClick={handleSaveManual}
+                disabled={isSubmittingManual}
+                className="flex-1 h-10 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-semibold shadow-xs"
+              >
+                {isSubmittingManual ? "Menyimpan..." : "Simpan Kehadiran"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

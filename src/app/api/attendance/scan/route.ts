@@ -5,7 +5,7 @@ import { getMentorForKelompok } from "@/lib/mentors"
 
 export async function POST(request: Request) {
   try {
-    const { token, sessionNumber: requestedSession } = await request.json()
+    const { token, sessionNumber: requestedSession, slot: requestedSlot } = await request.json()
 
     if (!token) {
       return NextResponse.json(
@@ -32,7 +32,10 @@ export async function POST(request: Request) {
 
     const supabase = createAdminClient()
 
-    // 2. Tentukan Sesi Aktif
+    // 2. Tentukan Sesi & Slot (Awal vs Akhir)
+    const slot: "awal" | "akhir" = requestedSlot === "akhir" ? "akhir" : "awal"
+    const slotLabel = slot === "akhir" ? "Presensi Akhir" : "Presensi Awal"
+
     let sessionNumber = requestedSession ? parseInt(requestedSession, 10) : 1
     if (!requestedSession) {
       try {
@@ -51,6 +54,11 @@ export async function POST(request: Request) {
       }
     }
 
+    // Actual session_number stored in database:
+    // Sesi 1..3 Awal  -> 1..3
+    // Sesi 1..3 Akhir -> 11..13
+    const actualSessionNumber = slot === "akhir" ? sessionNumber + 10 : sessionNumber
+
     // 3. Cari Data Peserta di Database
     const { data: member, error: memberErr } = await supabase
       .from("members")
@@ -67,19 +75,21 @@ export async function POST(request: Request) {
 
     const mentorInfo = getMentorForKelompok(member.kelompok)
 
-    // 4. Periksa Apakah Sudah Pernah Absen di Sesi Ini
+    // 4. Periksa Apakah Sudah Pernah Absen di Slot Ini
     const { data: existingAttendance } = await supabase
       .from("attendance")
       .select("id, scanned_at, status")
       .eq("member_id", member.id)
-      .eq("session_number", sessionNumber)
+      .eq("session_number", actualSessionNumber)
       .single()
 
     if (existingAttendance) {
       return NextResponse.json({
         success: false,
         alreadyAttended: true,
-        message: `Sudah tercatat hadir pada pukul ${new Date(existingAttendance.scanned_at).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })} WIB`,
+        slot,
+        slotLabel,
+        message: `Sudah tercatat di ${slotLabel} pada pukul ${new Date(existingAttendance.scanned_at).toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })} WIB`,
         attendedAt: existingAttendance.scanned_at,
         sessionNumber,
         member: {
@@ -98,11 +108,11 @@ export async function POST(request: Request) {
     const nowIso = new Date().toISOString()
     const { error: insertErr } = await supabase.from("attendance").insert({
       member_id: member.id,
-      session_number: sessionNumber,
+      session_number: actualSessionNumber,
       status: "hadir",
       method: "qr_scan",
       scanned_at: nowIso,
-      notes: "Scan Barcode Tiket Kamera HP Panitia"
+      notes: `Scan Barcode Tiket Kamera HP Panitia (${slotLabel})`
     })
 
     if (insertErr) {
@@ -110,7 +120,9 @@ export async function POST(request: Request) {
         return NextResponse.json({
           success: false,
           alreadyAttended: true,
-          message: "Sudah tercatat hadir pada sesi ini sebelumnya.",
+          slot,
+          slotLabel,
+          message: `Sudah tercatat di ${slotLabel} pada sesi ini sebelumnya.`,
           sessionNumber,
           member
         })
@@ -121,10 +133,16 @@ export async function POST(request: Request) {
       )
     }
 
+    const successMessage = slot === "akhir"
+      ? `Presensi Akhir Berhasil! Sampai jumpa, ${member.name}.`
+      : `Presensi Awal Berhasil! Selamat datang, ${member.name}.`
+
     return NextResponse.json({
       success: true,
       alreadyAttended: false,
-      message: `Presensi Berhasil! Selamat datang, ${member.name}.`,
+      slot,
+      slotLabel,
+      message: successMessage,
       sessionNumber,
       scannedAt: nowIso,
       member: {

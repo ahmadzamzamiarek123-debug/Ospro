@@ -35,12 +35,13 @@ interface CameraDevice {
 
 export default function MobileScannerPage() {
   const [sessionNumber, setSessionNumber] = useState<number>(1)
+  const [slot, setSlot] = useState<"awal" | "akhir">("awal")
   const [isScanning, setIsScanning] = useState<boolean>(false)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
   const [availableCameras, setAvailableCameras] = useState<CameraDevice[]>([])
   const [activeCameraIndex, setActiveCameraIndex] = useState<number>(0)
-  const [scanResult, setScanResult] = useState<ScanResult | null>(null)
-  const [recentScans, setRecentScans] = useState<Array<{ name: string; nim: string; time: string; status: "success" | "warning" }>>([])
+  const [scanResult, setScanResult] = useState<(ScanResult & { slotLabel?: string; slot?: "awal" | "akhir" }) | null>(null)
+  const [recentScans, setRecentScans] = useState<Array<{ name: string; nim: string; time: string; status: "success" | "warning"; slotLabel?: string }>>([])
   const [totalScannedToday, setTotalScannedToday] = useState<number>(0)
   const [soundEnabled, setSoundEnabled] = useState<boolean>(true)
   const [manualNim, setManualNim] = useState<string>("")
@@ -51,11 +52,16 @@ export default function MobileScannerPage() {
   const isCooldownRef = useRef<boolean>(false)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
   const sessionNumberRef = useRef<number>(sessionNumber)
+  const slotRef = useRef<"awal" | "akhir">(slot)
   const soundEnabledRef = useRef<boolean>(soundEnabled)
 
   useEffect(() => {
     sessionNumberRef.current = sessionNumber
   }, [sessionNumber])
+
+  useEffect(() => {
+    slotRef.current = slot
+  }, [slot])
 
   useEffect(() => {
     soundEnabledRef.current = soundEnabled
@@ -110,14 +116,20 @@ export default function MobileScannerPage() {
 
     try {
       const currentSession = sessionNumberRef.current
+      const currentSlot = slotRef.current
       const res = await fetch("/api/attendance/scan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: tokenString, sessionNumber: currentSession })
+        body: JSON.stringify({
+          token: tokenString,
+          sessionNumber: currentSession,
+          slot: currentSlot
+        })
       })
 
       const data = await res.json()
       const timeStr = new Date().toLocaleTimeString("id-ID", { hour: "2-digit", minute: "2-digit" })
+      const slotLabel = data.slotLabel || (currentSlot === "akhir" ? "Presensi Akhir" : "Presensi Awal")
 
       if (res.ok) {
         if (data.alreadyAttended) {
@@ -127,11 +139,13 @@ export default function MobileScannerPage() {
             name: data.member?.name,
             nim: data.member?.nim,
             kelompok: data.member?.kelompok,
-            message: data.message || "Sudah hadir",
-            time: timeStr
+            message: data.message || `Sudah tercatat di ${slotLabel}`,
+            time: timeStr,
+            slot: currentSlot,
+            slotLabel
           })
           setRecentScans((prev) => [
-            { name: data.member?.name || "-", nim: data.member?.nim || "-", time: timeStr, status: "warning" },
+            { name: data.member?.name || "-", nim: data.member?.nim || "-", time: timeStr, status: "warning", slotLabel },
             ...prev.slice(0, 3)
           ])
         } else {
@@ -141,12 +155,14 @@ export default function MobileScannerPage() {
             name: data.member?.name,
             nim: data.member?.nim,
             kelompok: data.member?.kelompok,
-            message: "Hadir",
-            time: timeStr
+            message: data.message || `${slotLabel} Berhasil`,
+            time: timeStr,
+            slot: currentSlot,
+            slotLabel
           })
           setTotalScannedToday((prev) => prev + 1)
           setRecentScans((prev) => [
-            { name: data.member?.name || "-", nim: data.member?.nim || "-", time: timeStr, status: "success" },
+            { name: data.member?.name || "-", nim: data.member?.nim || "-", time: timeStr, status: "success", slotLabel },
             ...prev.slice(0, 3)
           ])
         }
@@ -389,6 +405,42 @@ export default function MobileScannerPage() {
         </div>
       </header>
 
+      {/* Mode Presensi: Presensi Awal vs Presensi Akhir */}
+      <div className="pt-1 pb-1">
+        <div className="grid grid-cols-2 gap-2 bg-slate-200/80 p-1 rounded-2xl">
+          <button
+            type="button"
+            onClick={() => {
+              setSlot("awal")
+              setScanResult(null)
+            }}
+            className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+              slot === "awal"
+                ? "bg-emerald-600 text-white shadow-sm scale-[1.01]"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            <span className={`h-2 w-2 rounded-full ${slot === "awal" ? "bg-white animate-pulse" : "bg-emerald-500"}`} />
+            Presensi Awal
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setSlot("akhir")
+              setScanResult(null)
+            }}
+            className={`py-2 px-3 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
+              slot === "akhir"
+                ? "bg-blue-600 text-white shadow-sm scale-[1.01]"
+                : "text-slate-600 hover:text-slate-900"
+            }`}
+          >
+            <span className={`h-2 w-2 rounded-full ${slot === "akhir" ? "bg-white animate-pulse" : "bg-blue-500"}`} />
+            Presensi Akhir
+          </button>
+        </div>
+      </div>
+
       {/* Main Viewfinder */}
       <main className="space-y-4 my-auto">
         {/* Camera Box */}
@@ -456,9 +508,16 @@ export default function MobileScannerPage() {
                     <span className="text-slate-500 ml-1.5 font-mono text-[11px]">({scanResult.nim})</span>
                   </div>
                 </div>
-                <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md font-bold font-mono text-[11px] shrink-0 ml-2">
-                  {scanResult.kelompok}
-                </span>
+                <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                  <span className={`px-2 py-0.5 rounded-md font-bold font-mono text-[10px] text-white ${
+                    scanResult.slot === "akhir" ? "bg-blue-600" : "bg-emerald-600"
+                  }`}>
+                    {scanResult.slotLabel || (slot === "akhir" ? "Akhir" : "Awal")}
+                  </span>
+                  <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-md font-bold font-mono text-[11px]">
+                    {scanResult.kelompok}
+                  </span>
+                </div>
               </div>
             )}
 
@@ -472,7 +531,7 @@ export default function MobileScannerPage() {
                   </div>
                 </div>
                 <span className="bg-amber-100 text-amber-800 px-2 py-0.5 rounded-md font-bold font-mono text-[11px] shrink-0 ml-2">
-                  Sudah Hadir
+                  Sudah {scanResult.slotLabel || "Hadir"}
                 </span>
               </div>
             )}
@@ -490,7 +549,7 @@ export default function MobileScannerPage() {
         <form onSubmit={handleManualSubmit} className="flex gap-2">
           <Input
             type="text"
-            placeholder="Ketik NIM manual jika barcode terkendala..."
+            placeholder={`Ketik NIM manual untuk ${slot === "awal" ? "Presensi Awal" : "Presensi Akhir"}...`}
             value={manualNim}
             onChange={(e) => setManualNim(e.target.value)}
             className="h-11 bg-white border-slate-200 text-slate-900 placeholder:text-slate-400 rounded-xl text-xs font-mono focus-visible:ring-slate-300 shadow-xs"
@@ -498,9 +557,11 @@ export default function MobileScannerPage() {
           <Button
             type="submit"
             disabled={isManualLoading}
-            className="h-11 px-4 rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-semibold shrink-0 shadow-xs transition-all"
+            className={`h-11 px-4 rounded-xl text-white text-xs font-semibold shrink-0 shadow-xs transition-all ${
+              slot === "akhir" ? "bg-blue-600 hover:bg-blue-700" : "bg-emerald-600 hover:bg-emerald-700"
+            }`}
           >
-            {isManualLoading ? "..." : "Absen"}
+            {isManualLoading ? "..." : `Absen ${slot === "awal" ? "Awal" : "Akhir"}`}
           </Button>
           <Button
             type="button"
@@ -516,7 +577,9 @@ export default function MobileScannerPage() {
         {/* Mini Status & Recent List */}
         <div className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-xs space-y-3">
           <div className="flex items-center justify-between text-xs text-slate-500">
-            <span className="font-medium">Hadir Sesi {sessionNumber}</span>
+            <span className="font-medium">
+              Hadir Sesi {sessionNumber} ({slot === "awal" ? "Presensi Awal" : "Presensi Akhir"})
+            </span>
             <span className="font-bold text-slate-900 font-mono text-sm">{totalScannedToday} Mahasiswa</span>
           </div>
 
@@ -529,7 +592,14 @@ export default function MobileScannerPage() {
                     <span className="truncate font-medium text-slate-800">{s.name}</span>
                     <span className="font-mono text-[11px] text-slate-400">({s.nim})</span>
                   </div>
-                  <span className="font-mono text-[10px] text-slate-400 shrink-0">{s.time}</span>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded font-mono ${
+                      s.slotLabel?.includes("Akhir") ? "bg-blue-100 text-blue-700" : "bg-emerald-100 text-emerald-700"
+                    }`}>
+                      {s.slotLabel?.includes("Akhir") ? "Akhir" : "Awal"}
+                    </span>
+                    <span className="font-mono text-[10px] text-slate-400">{s.time}</span>
+                  </div>
                 </div>
               ))}
             </div>
