@@ -16,7 +16,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { Search, AlertTriangle, Shield, ArrowLeft, Maximize, Minimize, RotateCw } from "lucide-react"
+import { Search, AlertTriangle, Shield, ArrowLeft, Maximize, Minimize, RotateCw, ExternalLink } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import Link from "next/link"
 
@@ -196,7 +196,7 @@ function LeaderboardContent({ members }: { members: MemberWithPoints[] }) {
 
   return (
     <div className="w-full animate-in fade-in duration-200">
-      {/* Mobile View: Compact Card List (< 1024px) */}
+      {/* Mobile View: Compact Horizontal List (< 1024px) */}
       <div className="flex flex-col gap-2 lg:hidden w-full">
         {members.map((m) => (
           <Card key={m.id} className="w-full border-slate-200/80 shadow-xs rounded-xl bg-white">
@@ -204,7 +204,12 @@ function LeaderboardContent({ members }: { members: MemberWithPoints[] }) {
               <div className="flex justify-between items-center">
                 <div className="overflow-hidden space-y-0.5">
                   <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="font-bold text-slate-900 text-sm leading-tight truncate">{m.name}</span>
+                    <Link href={`/member/${m.id}`} className="group flex items-center gap-1 hover:text-blue-600 transition-colors">
+                      <span className="font-bold text-slate-900 text-sm leading-tight truncate group-hover:text-blue-600 group-hover:underline">
+                        {m.name}
+                      </span>
+                      <ExternalLink className="h-3 w-3 text-slate-400 group-hover:text-blue-600 shrink-0" />
+                    </Link>
                     {m.is_redo_ospro && (
                       <Badge variant="destructive" className="text-[8px] h-3.5 px-1 bg-red-500 border-none font-black uppercase tracking-tighter shrink-0">
                         ULANG OSI
@@ -277,7 +282,12 @@ function LeaderboardContent({ members }: { members: MemberWithPoints[] }) {
               <TableRow key={m.id} className="border-b-slate-100 hover:bg-slate-50/50 transition-colors h-14">
                 <TableCell className="px-6 py-2.5">
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-slate-900 text-sm tracking-tight">{m.name}</span>
+                    <Link href={`/member/${m.id}`} className="group flex items-center gap-1.5 hover:text-blue-600 transition-colors">
+                      <span className="font-bold text-slate-900 text-sm tracking-tight group-hover:text-blue-600 group-hover:underline">
+                        {m.name}
+                      </span>
+                      <ExternalLink className="h-3 w-3 text-slate-400 group-hover:text-blue-600 opacity-70 group-hover:opacity-100 transition-all" />
+                    </Link>
                     {m.is_redo_ospro && (
                       <Badge variant="destructive" className="text-[8px] h-4 px-1.5 bg-red-500 border-none font-black uppercase tracking-tighter">
                         ULANG OSI

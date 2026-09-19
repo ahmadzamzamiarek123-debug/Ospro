@@ -12,94 +12,42 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { toast } from "sonner"
 import { Textarea } from "@/components/ui/textarea"
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select"
-import { ChevronRight, CheckCircle2, ShieldAlert, Heart, Info, Sparkles, Scale } from "lucide-react"
-
-export interface MatrixItem {
-  name: string
-  defaultConsequence: string
-}
-
-export const VIOLATION_MATRIX: Record<ViolationType, MatrixItem[]> = {
-  ringan: [
-    { name: "Terlambat 5–10 menit", defaultConsequence: "Teguran + catatan + refleksi singkat" },
-    { name: "Atribut tidak lengkap", defaultConsequence: "Melengkapi atribut + teguran" },
-    { name: "Perlengkapan tidak dibawa", defaultConsequence: "Melengkapi perlengkapan + refleksi persiapan" },
-    { name: "Mengobrol saat materi", defaultConsequence: "Teguran + kembali fokus + merangkum poin yang terlewat" },
-    { name: "Lainnya", defaultConsequence: "Teguran langsung + perbaikan saat itu juga" },
-  ],
-  sedang: [
-    { name: "Terlambat berulang", defaultConsequence: "Evaluasi + rencana perbaikan + pemantauan" },
-    { name: "Berisik berulang setelah ditegur", defaultConsequence: "Pemanggilan + refleksi + tugas perbaikan" },
-    { name: "Tidak mengerjakan tugas", defaultConsequence: "Menyelesaikan tugas + refleksi + kontribusi perbaikan" },
-    { name: "Tidak hadir tanpa izin", defaultConsequence: "Klarifikasi + peringatan + tindak lanjut sesuai panitia" },
-    { name: "Alasan/izin palsu", defaultConsequence: "Klarifikasi; tingkat berdasarkan dampak dan kesengajaan" },
-    { name: "Mengajak peserta lain sengaja melanggar", defaultConsequence: "Klarifikasi + evaluasi; dapat dinaikkan bila berdampak luas" },
-    { name: "Lainnya", defaultConsequence: "Peringatan komdis + refleksi tertulis / tugas perbaikan" },
-  ],
-  berat: [
-    { name: "Meninggalkan kegiatan tanpa izin", defaultConsequence: "Klarifikasi khusus + surat pernyataan + evaluasi" },
-    { name: "Sengaja merusak fasilitas", defaultConsequence: "Klarifikasi + pertanggungjawaban/pemulihan" },
-    { name: "Perundungan/intimidasi", defaultConsequence: "Klarifikasi + penanganan khusus + pemulihan/eskalasi" },
-    { name: "Mengabaikan instruksi keselamatan", defaultConsequence: "Hentikan tindakan berisiko + klarifikasi + evaluasi khusus" },
-    { name: "Lainnya", defaultConsequence: "Pemanggilan dan klarifikasi khusus, surat pernyataan tanggung jawab" },
-  ],
-  baik: [
-    { name: "Keaktifan bertanya / menjawab materi", defaultConsequence: "Apresiasi keaktifan peserta" },
-    { name: "Inisiatif membantu sesama / kebersihan", defaultConsequence: "Apresiasi inisiatif kepedulian lingkungan/sesama" },
-    { name: "Menunjukkan komitmen & perubahan positif", defaultConsequence: "Apresiasi komitmen & perbaikan perilaku" },
-    { name: "Apresiasi lainnya", defaultConsequence: "Pencatatan poin kebaikan OSI" },
-  ],
-}
+import { ChevronRight, CheckCircle2, ShieldAlert, Heart, Info, Scale } from "lucide-react"
 
 export function ViolationSheet({ member, session }: { member: Member, session: Session | null }) {
   const [open, setOpen] = useState(false)
   const [type, setType] = useState<ViolationType | null>(null)
-  const [category, setCategory] = useState("")
-  const [customCategory, setCustomCategory] = useState("")
-  const [consequence, setConsequence] = useState("")
-  const [chronology, setChronology] = useState("")
+  const [notes, setNotes] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const supabase = createClient()
 
   const resetForm = () => {
     setType(null)
-    setCategory("")
-    setCustomCategory("")
-    setConsequence("")
-    setChronology("")
+    setNotes("")
   }
 
-  const handleCategorySelect = (selectedName: string) => {
-    setCategory(selectedName)
-    if (!type) return
-
-    const item = VIOLATION_MATRIX[type].find(m => m.name === selectedName)
-    if (item) {
-      setConsequence(item.defaultConsequence)
+  const getTypeLabel = (t: ViolationType) => {
+    switch (t) {
+      case 'baik': return 'Apresiasi Baik'
+      case 'ringan': return 'Sanksi Ringan'
+      case 'sedang': return 'Sanksi Sedang'
+      case 'berat': return 'Sanksi Berat'
     }
   }
 
   const handleSubmit = async () => {
     if (!type || !session) return
-    if (!category && !customCategory) {
-      toast.error("Pilih kategori terlebih dahulu")
+    
+    // Validasi Wajib: Catatan tidak boleh kosong
+    const cleanNotes = notes.trim()
+    if (!cleanNotes) {
+      toast.error("Catatan kedisiplinan wajib diisi!")
       return
     }
 
     setIsLoading(true)
-    const finalCategory = category === "Lainnya" || category === "Apresiasi lainnya" 
-      ? (customCategory || category) 
-      : category
 
     try {
       const { data: { user } } = await supabase.auth.getUser()
@@ -108,18 +56,18 @@ export function ViolationSheet({ member, session }: { member: Member, session: S
         member_id: member.id,
         violation_type: type,
         session_number: session.session_number,
-        violation_category: finalCategory,
-        consequence: consequence || null,
+        violation_category: getTypeLabel(type),
+        consequence: null,
         status: type === 'baik' ? 'selesai' : 'pending',
-        chronology: chronology || null,
-        notes: chronology || null,
+        chronology: cleanNotes,
+        notes: cleanNotes,
         recorded_by: user?.id
       })
 
       if (error) throw error
 
       toast.success("Catatan kedisiplinan disimpan", {
-        description: `${member.name} - Sesi ${session.session_number}`,
+        description: `${member.name} • ${getTypeLabel(type)} (Sesi ${session.session_number})`,
         icon: <CheckCircle2 className="h-4 w-4 text-emerald-500" />
       })
       setOpen(false)
@@ -150,23 +98,14 @@ export function ViolationSheet({ member, session }: { member: Member, session: S
     }
   }
 
-  const getTypeLabel = (t: ViolationType) => {
-    switch (t) {
-      case 'baik': return 'Apresiasi Baik'
-      case 'ringan': return 'Sanksi Ringan'
-      case 'sedang': return 'Sanksi Sedang'
-      case 'berat': return 'Sanksi Berat'
-    }
-  }
-
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full border border-slate-100">
-          <ChevronRight className="h-4 w-4 text-slate-300" />
+        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full border border-slate-100 hover:bg-slate-100">
+          <ChevronRight className="h-4 w-4 text-slate-400" />
         </Button>
       </SheetTrigger>
-      <SheetContent side="bottom" className="max-h-[90vh] sm:h-[650px] h-auto rounded-t-3xl p-4 sm:p-6 bg-white overflow-hidden shadow-2xl border-t-2">
+      <SheetContent side="bottom" className="max-h-[90vh] sm:h-[520px] h-auto rounded-t-3xl p-4 sm:p-6 bg-white overflow-hidden shadow-2xl border-t-2">
         <div className="space-y-6 overflow-y-auto max-h-full pb-10">
           <SheetHeader className="text-left">
             <div className="flex items-center justify-between">
@@ -193,8 +132,7 @@ export function ViolationSheet({ member, session }: { member: Member, session: S
                     className={`h-16 sm:h-20 rounded-2xl border-2 flex flex-col items-center justify-center gap-2 font-black transition-all ${getBtnStyles(t)}`}
                     onClick={() => {
                       setType(t)
-                      setCategory("")
-                      setConsequence("")
+                      setNotes("")
                     }}
                   >
                     {getIcon(t)}
@@ -213,61 +151,25 @@ export function ViolationSheet({ member, session }: { member: Member, session: S
                   <p className="text-[10px] font-bold uppercase text-slate-400">Kategori Terpilih</p>
                   <p className="font-black text-slate-900 leading-none">{getTypeLabel(type)}</p>
                 </div>
-                <Button variant="ghost" size="sm" onClick={() => setType(null)} className="h-7 text-xs font-bold text-primary">Ganti</Button>
+                <Button variant="ghost" size="sm" onClick={() => setType(null)} className="h-7 text-xs font-bold text-slate-600 hover:text-slate-900">
+                  Ganti
+                </Button>
               </div>
 
               <div className="space-y-4">
                 <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-400 uppercase ml-1">Jenis Pelanggaran / Kebaikan</label>
-                  <Select value={category} onValueChange={handleCategorySelect}>
-                    <SelectTrigger className="h-11 sm:h-12 bg-white border-slate-200 rounded-xl">
-                      <SelectValue placeholder="Pilih rincian dari SOP..." />
-                    </SelectTrigger>
-                    <SelectContent className="rounded-xl">
-                      {VIOLATION_MATRIX[type].map((item) => (
-                        <SelectItem key={item.name} value={item.name} className="text-sm font-medium">
-                          {item.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                {(category === "Lainnya" || category === "Apresiasi lainnya") && (
-                  <div className="space-y-1.5 animate-in fade-in">
-                    <label className="text-xs font-bold text-slate-400 uppercase ml-1">Rincian Khusus</label>
-                    <Input 
-                      placeholder="Tuliskan jenis kejadian..." 
-                      className="h-11 sm:h-12 bg-white border-slate-200 rounded-xl"
-                      value={customCategory}
-                      onChange={(e) => setCustomCategory(e.target.value)}
-                    />
-                  </div>
-                )}
-
-                <div className="space-y-1.5">
                   <div className="flex items-center justify-between ml-1">
-                    <label className="text-xs font-bold text-slate-400 uppercase flex items-center gap-1.5">
-                      <Sparkles className="h-3 w-3 text-primary" />
-                      Konsekuensi SOP Resmi
+                    <label className="text-xs font-bold text-slate-700 uppercase">
+                      Catatan Kedisiplinan <span className="text-red-500">* (Wajib)</span>
                     </label>
-                    <span className="text-[10px] text-slate-400">Otomatis / Dapat diedit</span>
+                    <span className="text-[10px] text-slate-400">Rincikan kejadian/alasan</span>
                   </div>
-                  <Input 
-                    placeholder="Konsekuensi sesuai SOP..." 
-                    className="h-11 bg-slate-50/50 border-slate-200 rounded-xl text-xs font-semibold text-slate-800"
-                    value={consequence}
-                    onChange={(e) => setConsequence(e.target.value)}
-                  />
-                </div>
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-bold text-slate-400 uppercase ml-1">Kronologi Singkat / Catatan</label>
                   <Textarea 
-                    placeholder="Contoh: Terlambat hadir pada pembukaan sesi materi ke-2, langsung ditegur dan diberi lembar refleksi..." 
-                    className="min-h-[80px] bg-white border-slate-200 rounded-xl p-3 text-xs"
-                    value={chronology}
-                    onChange={(e) => setChronology(e.target.value)}
+                    placeholder="Contoh: Datang terlambat pada sesi materi ke-2, tidak memakai dasi atribut resmi..." 
+                    className="min-h-[100px] bg-white border-slate-200 rounded-xl p-3 text-xs leading-relaxed focus-visible:ring-slate-300"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    required
                   />
                 </div>
 

@@ -325,7 +325,9 @@ function MemberCard({ member, session }: { member: Member, session: Session | nu
         </div>
         <div className="overflow-hidden space-y-0.5">
           <div className="flex items-center gap-1.5">
-            <h3 className="font-bold text-slate-900 text-sm truncate">{member.name}</h3>
+            <Link href={`/member/${member.id}`} className="hover:text-primary transition-colors">
+              <h3 className="font-bold text-slate-900 text-sm truncate hover:underline">{member.name}</h3>
+            </Link>
           </div>
           <div className="flex items-center gap-1.5">
             <p className="text-xs text-slate-400 font-mono truncate">{member.nim}</p>
@@ -337,7 +339,16 @@ function MemberCard({ member, session }: { member: Member, session: Session | nu
           </div>
         </div>
       </div>
-      <ViolationSheet member={member} session={session} />
+      <div className="flex items-center gap-1">
+        <Link 
+          href={`/member/${member.id}`}
+          className="text-[11px] font-semibold text-slate-500 hover:text-slate-900 px-2 py-1 rounded-lg hover:bg-slate-100 transition-colors"
+          title="Lihat Rincian & Riwayat"
+        >
+          Riwayat
+        </Link>
+        <ViolationSheet member={member} session={session} />
+      </div>
     </div>
   )
 }
