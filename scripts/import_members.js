@@ -1,12 +1,12 @@
 /**
  * Script Pengimpor Data Peserta OSPRO 2026 ke Supabase
- * Mendukung file CSV (.csv) atau JSON (.json)
+ * Mendukung format grup maupun tabular standar.
  *
  * Cara Menjalankan:
- * node scripts/import_members.js <path-ke-file-csv-atau-json>
+ * node scripts/import_members.js [path-ke-file-csv-atau-json]
  *
  * Contoh:
- * node scripts/import_members.js data_maba.csv
+ * node scripts/import_members.js data/peserta_ospro_2026.csv
  */
 
 const fs = require('fs');
@@ -24,84 +24,104 @@ if (!supabaseUrl || !serviceKey) {
 
 const supabase = createClient(supabaseUrl, serviceKey);
 
-// Parser CSV sederhana & handal (tanpa dependensi luar)
-function parseCSV(content) {
-  const lines = content.split(/\r?\n/).filter(line => line.trim().length > 0);
+function parseContent(content) {
+  const lines = content.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
   if (lines.length < 2) return [];
 
-  // Deteksi pemisah (koma atau titik koma)
+  // Periksa apakah format kelompok berblok
+  const isGrouped = lines.some(l => l.startsWith('Kelompok ') && l.includes('Pendamping:'));
+
+  if (isGrouped) {
+    let currentKelompok = 'Kelompok 1';
+    const members = [];
+
+    for (const line of lines) {
+      if (line.startsWith('Kelompok ') && line.includes('Pendamping:')) {
+        const match = line.match(/^Kelompok\s+(\d+)/i);
+        if (match) {
+          currentKelompok = 'Kelompok ' + match[1];
+        }
+        continue;
+      }
+      if (line.startsWith('No,') || line.startsWith(',Nama Pendamping')) {
+        continue;
+      }
+      const parts = line.split(',').map(p => p.trim().replace(/^["']|["']$/g, ''));
+      if (parts.length >= 3 && /^\d+$/.test(parts[0]) && parts[2].length >= 7) {
+        members.push({
+          nim: parts[2],
+          name: parts[1],
+          role: 'peserta',
+          kelompok: currentKelompok
+        });
+      }
+    }
+    return members;
+  }
+
+  // Fallback: format CSV tabular biasa
   const delimiter = lines[0].includes(';') ? ';' : ',';
   const headers = lines[0].split(delimiter).map(h => h.trim().toLowerCase().replace(/^["']|["']$/g, ''));
 
   const rows = [];
   for (let i = 1; i < lines.length; i++) {
-    const currentLine = lines[i];
-    // Split dengan regex untuk menangani kutip
-    const values = currentLine.split(delimiter).map(v => v.trim().replace(/^["']|["']$/g, ''));
-    if (values.length === headers.length || values.length >= 2) {
+    const values = lines[i].split(delimiter).map(v => v.trim().replace(/^["']|["']$/g, ''));
+    if (values.length >= 2) {
       const row = {};
       headers.forEach((h, idx) => {
         row[h] = values[idx] || '';
       });
-      rows.push(row);
+      const nim = (row.nim || row['nomor induk'] || '').trim();
+      const name = (row.name || row.nama || `Peserta ${i}`).trim();
+      let kelompok = (row.kelompok || 'Kelompok 1').trim();
+      if (!kelompok.toLowerCase().startsWith('kelompok')) {
+        kelompok = `Kelompok ${kelompok}`;
+      }
+      if (nim) {
+        rows.push({
+          nim,
+          name,
+          role: 'peserta',
+          kelompok
+        });
+      }
     }
   }
   return rows;
 }
 
 async function run() {
-  const filePath = process.argv[2];
-  if (!filePath) {
-    console.log('Penggunaan: node scripts/import_members.js <nama-file.csv>');
-    console.log('Contoh: node scripts/import_members.js peserta.csv');
-    process.exit(0);
-  }
-
+  const filePath = process.argv[2] || 'data/peserta_ospro_2026.csv';
   const fullPath = path.resolve(process.cwd(), filePath);
+
   if (!fs.existsSync(fullPath)) {
     console.error(`File tidak ditemukan: ${fullPath}`);
     process.exit(1);
   }
 
-  console.log(`Membaca file: ${fullPath} ...`);
+  console.log(`Membaca file data: ${fullPath} ...`);
   const raw = fs.readFileSync(fullPath, 'utf8');
 
-  let rawList = [];
+  let membersToInsert = [];
   if (fullPath.endsWith('.json')) {
-    rawList = JSON.parse(raw);
+    membersToInsert = JSON.parse(raw);
   } else {
-    rawList = parseCSV(raw);
+    membersToInsert = parseContent(raw);
   }
 
-  console.log(`Ditemukan ${rawList.length} baris data peserta.`);
+  console.log(`Ditemukan ${membersToInsert.length} data peserta valid.`);
 
-  if (rawList.length === 0) {
+  if (membersToInsert.length === 0) {
     console.log('Tidak ada data yang dapat diproses.');
     return;
   }
 
-  // Normalisasi kolom
-  const membersToInsert = rawList.map((r, idx) => {
-    const nim = (r.nim || r.NIM || r['nomor induk'] || r['no induk'] || '').toString().trim();
-    const name = (r.name || r.nama || r.NAMA || r['nama lengkap'] || `Peserta ${idx + 1}`).trim();
-    let kelompok = (r.kelompok || r.KELOMPOK || r.grup || r.group || 'Kelompok 1').trim();
-    if (!kelompok.toLowerCase().startsWith('kelompok')) {
-      kelompok = `Kelompok ${kelompok}`;
-    }
-    const pendamping = (r.pendamping || r.lo || r.mentor || r.kakak || '').trim();
-    const no_wa_pendamping = (r.no_wa_pendamping || r.wa || r.telepon || r.whatsapp || '').trim();
-
-    return {
-      nim,
-      name,
-      role: 'peserta',
-      kelompok,
-      pendamping: pendamping || null,
-      no_wa_pendamping: no_wa_pendamping || null
-    };
-  }).filter(m => m.nim.length > 0);
-
-  console.log(`Memproses ${membersToInsert.length} data valid dengan NIM...`);
+  // Tampilkan ringkasan per kelompok
+  const summary = {};
+  membersToInsert.forEach(m => {
+    summary[m.kelompok] = (summary[m.kelompok] || 0) + 1;
+  });
+  console.log('Distribusi per kelompok:', summary);
 
   // Batch insert/upsert (per 50 data)
   const batchSize = 50;
@@ -114,7 +134,7 @@ async function run() {
       .upsert(batch, { onConflict: 'nim' });
 
     if (error) {
-      console.error(`Gagal pada baris ke-${i + 1}:`, error.message);
+      console.error(`Gagal pada batch ke-${i + 1}:`, error.message);
     } else {
       totalSuccess += batch.length;
       console.log(`✓ Berhasil mengimpor ${totalSuccess} / ${membersToInsert.length} peserta...`);

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { verifyTicketToken } from "@/lib/ticketToken"
-import { createClient } from "@/lib/supabase/server"
+import { createAdminClient } from "@/lib/supabase/admin"
+import { getMentorForKelompok } from "@/lib/mentors"
 
 export async function POST(request: Request) {
   try {
@@ -23,7 +24,7 @@ export async function POST(request: Request) {
     }
 
     const nim = verification.nim.trim().toLowerCase()
-    const supabase = createClient()
+    const supabase = createAdminClient()
 
     // 2. Tentukan Sesi Aktif
     let sessionNumber = requestedSession ? parseInt(requestedSession, 10) : 1
@@ -47,7 +48,7 @@ export async function POST(request: Request) {
     // 3. Cari Data Peserta di Database
     const { data: member, error: memberErr } = await supabase
       .from("members")
-      .select("id, nim, name, role, kelompok, pendamping, no_wa_pendamping")
+      .select("id, nim, name, role, kelompok")
       .ilike("nim", nim)
       .single()
 
@@ -57,6 +58,8 @@ export async function POST(request: Request) {
         { status: 404 }
       )
     }
+
+    const mentorInfo = getMentorForKelompok(member.kelompok)
 
     // 4. Periksa Apakah Sudah Pernah Absen di Sesi Ini
     const { data: existingAttendance } = await supabase
@@ -79,8 +82,8 @@ export async function POST(request: Request) {
           name: member.name,
           role: member.role,
           kelompok: member.kelompok || "Tanpa Kelompok",
-          pendamping: member.pendamping || "-",
-          no_wa_pendamping: member.no_wa_pendamping || null
+          pendamping: mentorInfo.pendamping,
+          no_wa_pendamping: mentorInfo.no_wa_pendamping || null
         }
       })
     }
@@ -124,8 +127,8 @@ export async function POST(request: Request) {
         name: member.name,
         role: member.role,
         kelompok: member.kelompok || "Tanpa Kelompok",
-        pendamping: member.pendamping || "-",
-        no_wa_pendamping: member.no_wa_pendamping || null
+        pendamping: mentorInfo.pendamping,
+        no_wa_pendamping: mentorInfo.no_wa_pendamping || null
       }
     })
   } catch (err) {

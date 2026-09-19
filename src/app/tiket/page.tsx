@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Member } from "@/types/database"
 import { generateTicketToken } from "@/lib/ticketToken"
+import { getMentorForKelompok } from "@/lib/mentors"
 import { QRCodeSVG } from "qrcode.react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -80,17 +81,6 @@ export default function TicketClaimPage() {
         const token = generateTicketToken(data.nim)
         setTicketToken(token)
         setIsLoading(false)
-
-        // Catat waktu klaim ke Supabase
-        try {
-          await supabase
-            .from("members")
-            .update({ ticket_claimed_at: new Date().toISOString() })
-            .eq("id", data.id)
-        } catch {
-          // ignore
-        }
-
         toast.success(`Selamat bergabung di ${data.kelompok || "Kelompok Anda"}!`)
       }, 2400)
     } catch {
@@ -252,30 +242,38 @@ export default function TicketClaimPage() {
               </div>
 
               {/* Mentor / Pendamping Info */}
-              <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 text-left space-y-2">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-slate-500" />
-                    <div>
-                      <p className="text-[9px] font-bold text-slate-400 uppercase">Pendamping Kelompok</p>
-                      <p className="text-xs font-bold text-slate-800">
-                        {member.pendamping || "Sie Acara / Komdis"}
-                      </p>
+              {(() => {
+                const mentor = getMentorForKelompok(member.kelompok)
+                const mentorName = member.pendamping || mentor.pendamping
+                const mentorWa = member.no_wa_pendamping || mentor.no_wa_pendamping
+
+                return (
+                  <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-100 text-left space-y-2">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <Users className="h-4 w-4 text-slate-500" />
+                        <div>
+                          <p className="text-[9px] font-bold text-slate-400 uppercase">Pendamping Kelompok</p>
+                          <p className="text-xs font-bold text-slate-800">
+                            {mentorName}
+                          </p>
+                        </div>
+                      </div>
+
+                      {mentorWa && (
+                        <a
+                          href={`https://wa.me/${mentorWa.replace(/[^0-9]/g, "")}?text=Halo%20Kak,%20saya%20${encodeURIComponent(member.name)}%20dari%20${encodeURIComponent(member.kelompok || "Kelompok")}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center gap-1 text-[10px] font-bold bg-emerald-500 text-white px-3 py-1.5 rounded-xl hover:bg-emerald-600 transition-colors shrink-0 shadow-sm"
+                        >
+                          <MessageCircle className="h-3 w-3" /> Chat WA
+                        </a>
+                      )}
                     </div>
                   </div>
-
-                  {member.no_wa_pendamping && (
-                    <a
-                      href={`https://wa.me/${member.no_wa_pendamping.replace(/[^0-9]/g, "")}?text=Halo%20Kak,%20saya%20${encodeURIComponent(member.name)}%20dari%20${encodeURIComponent(member.kelompok || "Kelompok")}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="inline-flex items-center gap-1 text-[10px] font-bold bg-emerald-500 text-white px-3 py-1.5 rounded-xl hover:bg-emerald-600 transition-colors shrink-0 shadow-sm"
-                    >
-                      <MessageCircle className="h-3 w-3" /> Chat WA
-                    </a>
-                  )}
-                </div>
-              </div>
+                )
+              })()}
 
               <div className="pt-1">
                 <p className="text-[10px] font-bold text-amber-700 bg-amber-50 py-1.5 px-3 rounded-xl inline-block border border-amber-200/60">
