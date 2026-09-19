@@ -94,11 +94,18 @@ export default function PublicLeaderboard() {
               OSPRO HIMASI 2026
             </span>
           </div>
-          <Link href="/masuk">
-            <Button variant="ghost" size="sm" className="font-bold text-xs hover:bg-primary hover:text-white transition-all rounded-xl">
-              Masuk Panitia
-            </Button>
-          </Link>
+          <div className="flex items-center gap-2">
+            <Link href="/tiket">
+              <Button variant="outline" size="sm" className="h-8 px-3 text-xs font-semibold rounded-lg border-slate-200 text-slate-700 hover:bg-slate-50">
+                Tiket Peserta
+              </Button>
+            </Link>
+            <Link href="/masuk">
+              <Button variant="ghost" size="sm" className="h-8 px-3 text-xs font-semibold rounded-lg text-slate-600 hover:text-slate-900">
+                Panitia
+              </Button>
+            </Link>
+          </div>
         </div>
       </header>
 

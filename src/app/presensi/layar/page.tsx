@@ -222,70 +222,59 @@ export default function PresensiLayarPage() {
       {/* Main Content */}
       <main className="flex-1 container max-w-3xl mx-auto p-4 sm:p-6 flex flex-col items-center justify-center">
         <Tabs defaultValue="barcode" className="w-full flex flex-col items-center">
-          <TabsList className="bg-slate-200/70 p-1 rounded-xl mb-6">
+          <TabsList className="bg-slate-100 p-1 rounded-xl mb-6">
             <TabsTrigger
               value="barcode"
-              className="rounded-lg px-6 h-8 text-xs font-bold data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all"
+              className="rounded-lg px-4 h-8 text-xs font-semibold data-[state=active]:bg-white data-[state=active]:shadow-xs transition-all"
             >
-              Barcode QR (Peserta & Panitia)
+              Barcode Layar
             </TabsTrigger>
             <TabsTrigger
               value="manual"
-              className="rounded-lg px-6 h-8 text-xs font-bold data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all"
+              className="rounded-lg px-4 h-8 text-xs font-semibold data-[state=active]:bg-white data-[state=active]:shadow-xs transition-all"
             >
-              Presensi Manual ({members.filter((m) => !m.isAttended).length} Belum)
+              Daftar Manual ({members.filter((m) => !m.isAttended).length})
             </TabsTrigger>
           </TabsList>
 
           {/* TAB 1: BARCODE QR */}
-          <TabsContent value="barcode" className="m-0 w-full max-w-sm flex flex-col items-center focus-visible:outline-none">
-            <Card className="border-none shadow-sm rounded-2xl overflow-hidden bg-white w-full p-6 sm:p-8 text-center space-y-5">
-              <div className="space-y-1">
-                <h2 className="text-xl font-bold text-slate-900">Scan Barcode</h2>
-                <p className="text-xs text-slate-400">
-                  Arahkan kamera HP ke barcode untuk presensi Peserta maupun Panitia
+          <TabsContent value="barcode" className="m-0 w-full max-w-xs flex flex-col items-center focus-visible:outline-none">
+            <Card className="border border-slate-200/80 shadow-xs rounded-2xl overflow-hidden bg-white w-full p-6 text-center space-y-4">
+              <div className="space-y-0.5">
+                <h2 className="text-base font-bold text-slate-900">Barcode Presensi</h2>
+                <p className="text-xs text-slate-500">
+                  Scan untuk presensi kehadiran sesi ini
                 </p>
               </div>
 
               {/* QR Container Minimalist */}
-              <div className="p-4 bg-white rounded-xl border border-slate-100 flex items-center justify-center inline-block mx-auto">
+              <div className="p-3 bg-white rounded-xl border border-slate-200 flex items-center justify-center inline-block mx-auto">
                 {qrUrl ? (
                   <QRCodeSVG
                     value={qrUrl}
-                    size={240}
+                    size={220}
                     level="H"
                     includeMargin={false}
-                    className="w-[240px] h-[240px]"
+                    className="w-[220px] h-[220px]"
                   />
                 ) : (
-                  <div className="w-[240px] h-[240px] flex items-center justify-center text-slate-300">
-                    <RotateCw className="h-6 w-6 animate-spin" />
+                  <div className="w-[220px] h-[220px] flex items-center justify-center text-slate-300">
+                    <RotateCw className="h-5 w-5 animate-spin" />
                   </div>
                 )}
               </div>
 
               {/* Timer & Refresh */}
-              <div className="space-y-2 pt-1">
-                <p className="text-xs text-slate-400 font-medium">
-                  Berganti otomatis dalam <span className="font-bold text-slate-700 font-mono">{countdown} detik</span>
-                </p>
-                <div className="w-full h-1 bg-slate-100 rounded-full overflow-hidden">
-                  <div
-                    className="h-full bg-primary transition-all duration-1000 ease-linear rounded-full"
-                    style={{ width: `${(countdown / 60) * 100}%` }}
-                  />
-                </div>
-              </div>
-
-              <div>
+              <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
+                <span className="font-mono">{countdown}s</span>
                 <button
                   type="button"
                   onClick={fetchToken}
                   disabled={isRefreshing}
-                  className="text-xs font-bold text-primary hover:text-blue-700 transition-colors inline-flex items-center gap-1.5"
+                  className="font-medium text-slate-700 hover:text-slate-950 inline-flex items-center gap-1 transition-colors"
                 >
                   <RotateCw className={`h-3 w-3 ${isRefreshing ? "animate-spin" : ""}`} />
-                  Segarkan barcode sekarang
+                  Perbarui
                 </button>
               </div>
             </Card>

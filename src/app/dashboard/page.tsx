@@ -131,51 +131,38 @@ export default function DashboardPage() {
       {/* Quick Action Presensi Modes */}
       <section className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <Link href="/presensi/scanner" className="block">
-          <div className="p-4 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 text-white shadow-sm hover:shadow-md transition-all active:scale-[0.99] border border-slate-700">
-            <div className="flex items-center justify-between mb-2">
-              <div className="h-8 w-8 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center">
-                <Camera className="h-4 w-4" />
-              </div>
-              <span className="text-[9px] font-black uppercase tracking-wider bg-blue-500/30 text-blue-300 px-2 py-0.5 rounded-full">
-                Mode 2 Baru
-              </span>
+          <div className="p-4 rounded-xl bg-white border border-slate-200/80 shadow-xs hover:border-slate-400 transition-all">
+            <div className="flex items-center gap-2.5 mb-1.5">
+              <Camera className="h-4 w-4 text-slate-700" />
+              <p className="font-bold text-sm text-slate-900">Scanner HP</p>
             </div>
-            <p className="font-bold text-sm">Scanner Kamera HP</p>
-            <p className="text-[11px] text-slate-400 mt-0.5">Scan tiket/print maba via kamera HP panitia</p>
+            <p className="text-xs text-slate-500">Scan barcode tiket peserta lewat kamera</p>
           </div>
         </Link>
 
         <Link href="/presensi/layar" target="_blank" className="block">
-          <div className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md transition-all active:scale-[0.99]">
-            <div className="flex items-center justify-between mb-2">
-              <div className="h-8 w-8 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center">
-                <QrCode className="h-4 w-4" />
+          <div className="p-4 rounded-xl bg-white border border-slate-200/80 shadow-xs hover:border-slate-400 transition-all">
+            <div className="flex items-center justify-between mb-1.5">
+              <div className="flex items-center gap-2.5">
+                <QrCode className="h-4 w-4 text-slate-700" />
+                <p className="font-bold text-sm text-slate-900">Layar Operator</p>
               </div>
-              <span className="text-[9px] font-black uppercase tracking-wider bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">
-                Mode 1
-              </span>
+              <ExternalLink className="h-3.5 w-3.5 text-slate-400" />
             </div>
-            <p className="font-bold text-sm text-slate-900 flex items-center gap-1">
-              Layar Operator Laptop <ExternalLink className="h-3 w-3 text-slate-400" />
-            </p>
-            <p className="text-[11px] text-slate-400 mt-0.5">Tampilkan barcode dinamis di meja registrasi</p>
+            <p className="text-xs text-slate-500">Tampilan meja registrasi & input manual</p>
           </div>
         </Link>
 
         <Link href="/tiket" target="_blank" className="block">
-          <div className="p-4 rounded-2xl bg-white border border-slate-100 shadow-sm hover:shadow-md transition-all active:scale-[0.99]">
-            <div className="flex items-center justify-between mb-2">
-              <div className="h-8 w-8 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-                <Ticket className="h-4 w-4" />
+          <div className="p-4 rounded-xl bg-white border border-slate-200/80 shadow-xs hover:border-slate-400 transition-all">
+            <div className="flex items-center justify-between mb-1.5">
+              <div className="flex items-center gap-2.5">
+                <Ticket className="h-4 w-4 text-slate-700" />
+                <p className="font-bold text-sm text-slate-900">Tiket Peserta</p>
               </div>
-              <span className="text-[9px] font-black uppercase tracking-wider bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full">
-                Khusus TM
-              </span>
+              <ExternalLink className="h-3.5 w-3.5 text-slate-400" />
             </div>
-            <p className="font-bold text-sm text-slate-900 flex items-center gap-1">
-              Klaim Tiket Maba <ExternalLink className="h-3 w-3 text-slate-400" />
-            </p>
-            <p className="text-[11px] text-slate-400 mt-0.5">Link disebar ke maba untuk undi kelompok & QR</p>
+            <p className="text-xs text-slate-500">Link untuk mahasiswa melihat barcode</p>
           </div>
         </Link>
       </section>
