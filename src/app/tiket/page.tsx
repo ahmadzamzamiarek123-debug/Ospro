@@ -299,7 +299,7 @@ export default function TicketClaimPage() {
                 </button>
 
                 <span className="text-[10px] font-mono text-slate-400 mt-0.5">
-                  Berlaku untuk Sesi 1 - 4
+                  Berlaku untuk Sesi 1 - 3
                 </span>
               </div>
 
@@ -308,6 +308,8 @@ export default function TicketClaimPage() {
                 const mentor = getMentorForKelompok(member.kelompok)
                 const mentorName = member.pendamping || mentor.pendamping
                 const mentorWa = member.no_wa_pendamping || mentor.no_wa_pendamping
+                const kelompokText = member.kelompok || "Kelompok 1"
+                const waMessage = `Halo Kak, saya ${member.name} (${member.nim}) dari ${kelompokText}`
 
                 return (
                   <div className="pt-3 border-t border-slate-100 flex items-center justify-between text-xs">
@@ -323,7 +325,7 @@ export default function TicketClaimPage() {
 
                     {mentorWa && (
                       <a
-                        href={`https://wa.me/${formatWaNumber(mentorWa)}?text=Halo%20Kak,%20saya%20${encodeURIComponent(member.name)}%20(${member.nim})`}
+                        href={`https://wa.me/${formatWaNumber(mentorWa)}?text=${encodeURIComponent(waMessage)}`}
                         target="_blank"
                         rel="noreferrer"
                         className="inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700 hover:text-emerald-800 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200/60 transition-colors"
