@@ -65,14 +65,14 @@ async function main() {
     }
   }
 
-  // 3. Update password Super Admin menjadi default 'pwosi2026'
-  console.log('\n[3/5] Memperbarui password Super Admin menjadi default pwosi2026...');
+  // 3. Update password Super Admin menjadi '123Zamzami'
+  console.log('\n[3/5] Memperbarui password Super Admin menjadi 123Zamzami...');
   const { data: adminUser } = await supabase.from('users').select('*').eq('role', 'admin').single();
   if (adminUser) {
     const { error: adminPassErr } = await supabase.auth.admin.updateUserById(adminUser.id, {
-      password: DEFAULT_PASSWORD
+      password: '123Zamzami'
     });
-    console.log(' - Password Super Admin updated:', adminPassErr ? adminPassErr.message : 'BERHASIL (pwosi2026)');
+    console.log(' - Password Super Admin updated:', adminPassErr ? adminPassErr.message : 'BERHASIL (123Zamzami)');
   }
 
   // 4. Mendaftarkan 7 petugas baru
