@@ -6,7 +6,7 @@ import { Member, Session, User } from "@/types/database"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Search, UserCircle, Users, Award, Calendar, LogOut, ShieldCheck, Camera, QrCode, Ticket, ExternalLink, Monitor, Loader2 } from "lucide-react"
+import { Search, UserCircle, Users, Award, Calendar, LogOut, ShieldCheck, Camera, QrCode, Ticket, ExternalLink, Monitor, Loader2, Shirt } from "lucide-react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { toast } from "sonner"
@@ -201,8 +201,18 @@ export default function DashboardPage() {
         />
       </section>
 
-      {/* Quick Action Presensi & Layar Modes */}
-      <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      {/* Quick Action Presensi, Atribut & Layar Modes */}
+      <section className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        <Link href="/atribut" className="block">
+          <div className="p-3.5 rounded-xl bg-white border border-slate-200/80 shadow-xs hover:border-slate-400 transition-all">
+            <div className="flex items-center gap-2 mb-1">
+              <Shirt className="h-4 w-4 text-slate-700" />
+              <p className="font-bold text-xs sm:text-sm text-slate-900">Cek Atribut</p>
+            </div>
+            <p className="text-[11px] text-slate-500">Meja Sekdis & perlengkapan</p>
+          </div>
+        </Link>
+
         <Link href="/presensi/scanner" className="block">
           <div className="p-3.5 rounded-xl bg-white border border-slate-200/80 shadow-xs hover:border-slate-400 transition-all">
             <div className="flex items-center gap-2 mb-1">

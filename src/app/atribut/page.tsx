@@ -1,0 +1,1200 @@
+"use client"
+
+import { useState, useEffect, useRef, useCallback, useMemo } from "react"
+import { createClient } from "@/lib/supabase/client"
+import { Member, User } from "@/types/database"
+import { AttributeItem, getRafiaForKelompok } from "@/lib/attributeDefaults"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { 
+  ArrowLeft, 
+  Search, 
+  Check, 
+  X, 
+  CheckCircle2, 
+  AlertTriangle, 
+  RotateCw, 
+  Plus, 
+  Trash2, 
+  SlidersHorizontal,
+  Shirt,
+  ShoppingBag,
+  FileText,
+  Copy
+} from "lucide-react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { toast } from "sonner"
+import Link from "next/link"
+
+interface AttributeCheckRecord {
+  id: string
+  member_id: string
+  session_number: number
+  status: "lengkap" | "tidak_lengkap"
+  checked_items: string[]
+  missing_items: string[]
+  notes: string | null
+  checked_by: string | null
+  checked_at: string
+}
+
+export default function AttributeCheckPage() {
+  const [sessionNumber, setSessionNumber] = useState<number>(1)
+  const [currentUser, setCurrentUser] = useState<User | null>(null)
+  const [isAdmin, setIsAdmin] = useState<boolean>(false)
+
+  // Data
+  const [members, setMembers] = useState<Member[]>([])
+  const [checks, setChecks] = useState<Record<string, AttributeCheckRecord>>({})
+  const [attributeItems, setAttributeItems] = useState<AttributeItem[]>([])
+
+  // Search & Filter
+  const [searchQuery, setSearchQuery] = useState<string>("")
+  const [statusFilter, setStatusFilter] = useState<"semua" | "belum" | "lengkap" | "kurang">("semua")
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null)
+
+  // Checklist Form State
+  const [checkedItemIds, setCheckedItemIds] = useState<Set<string>>(new Set())
+  const [notes, setNotes] = useState<string>("")
+  const [recordViolation, setRecordViolation] = useState<boolean>(true)
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false)
+  const [recentCheckedMembers, setRecentCheckedMembers] = useState<Member[]>([])
+
+  // Modal Kelola Atribut (Admin)
+  const [isManageModalOpen, setIsManageModalOpen] = useState<boolean>(false)
+  const [manageSession, setManageSession] = useState<number>(1)
+  const [manageItems, setManageItems] = useState<AttributeItem[]>([])
+  const [isSavingConfig, setIsSavingConfig] = useState<boolean>(false)
+  const [newItemName, setNewItemName] = useState<string>("")
+  const [newItemCategory, setNewItemCategory] = useState<"dresscode" | "atribut" | "tugas">("atribut")
+  const [newItemDetail, setNewItemDetail] = useState<string>("")
+  const [needsSqlAlert, setNeedsSqlAlert] = useState<boolean>(false)
+
+  const searchInputRef = useRef<HTMLInputElement>(null)
+
+  // 1. Ambil data sesi aktif terpusat & data user
+  useEffect(() => {
+    async function initUserAndSession() {
+      const supabase = createClient()
+      try {
+        const { data: { user } } = await supabase.auth.getUser()
+        if (user) {
+          const { data: profile } = await supabase
+            .from("users")
+            .select("*")
+            .eq("id", user.id)
+            .single()
+          if (profile) {
+            setCurrentUser(profile as User)
+            if (profile.role === "admin" || profile.nim === "admin" || user.email?.startsWith("admin")) {
+              setIsAdmin(true)
+            }
+          }
+        }
+
+        // Ambil sesi aktif terpusat
+        const res = await fetch("/api/session/active")
+        const json = await res.json()
+        if (json.success && json.sessionNumber) {
+          setSessionNumber(json.sessionNumber)
+          setManageSession(json.sessionNumber)
+        }
+      } catch {
+        // ignore
+      }
+    }
+    initUserAndSession()
+  }, [])
+
+  // 2. Ambil data members (hanya peserta)
+  const fetchMembers = useCallback(async () => {
+    const supabase = createClient()
+    try {
+      const { data } = await supabase
+        .from("members")
+        .select("*")
+        .eq("role", "peserta")
+        .order("nim", { ascending: true })
+
+      if (data) {
+        setMembers(data as Member[])
+      }
+    } catch {
+      // ignore
+    }
+  }, [])
+
+  // 3. Ambil daftar atribut untuk sesi saat ini
+  const fetchAttributeItems = useCallback(async (session: number) => {
+    try {
+      const res = await fetch(`/api/attributes/config?session=${session}`)
+      const data = await res.json()
+      if (data.success && Array.isArray(data.items)) {
+        setAttributeItems(data.items)
+      }
+    } catch {
+      // ignore
+    }
+  }, [])
+
+  // 4. Ambil hasil rekaman pemeriksaan atribut untuk sesi ini
+  const fetchChecks = useCallback(async (session: number) => {
+    try {
+      const res = await fetch(`/api/attributes/check?session=${session}`)
+      const data = await res.json()
+      if (data.success && Array.isArray(data.checks)) {
+        const checkMap: Record<string, AttributeCheckRecord> = {}
+        data.checks.forEach((c: AttributeCheckRecord) => {
+          checkMap[c.member_id] = c
+        })
+        setChecks(checkMap)
+        if (data.needsSql) {
+          setNeedsSqlAlert(true)
+        }
+      }
+    } catch {
+      // ignore
+    }
+  }, [])
+
+  // Muat data awal
+  useEffect(() => {
+    fetchMembers()
+    fetchAttributeItems(sessionNumber)
+    fetchChecks(sessionNumber)
+  }, [fetchMembers, fetchAttributeItems, fetchChecks, sessionNumber])
+
+  // Saat member dipilih, isi checklist sesuai riwayat (jika sudah dicek) atau kosongkan
+  useEffect(() => {
+    if (selectedMember) {
+      const existing = checks[selectedMember.id]
+      if (existing) {
+        setCheckedItemIds(new Set(existing.checked_items || []))
+        setNotes(existing.notes || "")
+      } else {
+        // Default baru: kosong (atau bisa klik tombol "Lengkap Semua")
+        setCheckedItemIds(new Set())
+        setNotes("")
+      }
+    }
+  }, [selectedMember, checks])
+
+  // Fokuskan kembali ke input pencarian
+  const focusSearch = () => {
+    setTimeout(() => {
+      searchInputRef.current?.focus()
+      searchInputRef.current?.select()
+    }, 50)
+  }
+
+  // Pilih member untuk diperiksa
+  const handleSelectMember = (member: Member) => {
+    setSelectedMember(member)
+  }
+
+  // Centang semua item (Fast Track)
+  const handleCheckAll = () => {
+    const allIds = new Set(attributeItems.map((item) => item.id))
+    setCheckedItemIds(allIds)
+  }
+
+  // Kosongkan centang
+  const handleClearAll = () => {
+    setCheckedItemIds(new Set())
+  }
+
+  // Toggle single item
+  const handleToggleItem = (itemId: string) => {
+    setCheckedItemIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(itemId)) {
+        next.delete(itemId)
+      } else {
+        next.add(itemId)
+      }
+      return next
+    })
+  }
+
+  // Simpan hasil pemeriksaan
+  const handleSaveCheck = async () => {
+    if (!selectedMember) return
+    setIsSubmitting(true)
+
+    const checkedArray = Array.from(checkedItemIds)
+    const missingItems = attributeItems
+      .filter((item) => !checkedItemIds.has(item.id))
+      .map((item) => item.name)
+
+    const isComplete = missingItems.length === 0
+    const status: "lengkap" | "tidak_lengkap" = isComplete ? "lengkap" : "tidak_lengkap"
+    const officerName = currentUser?.name || "Petugas Sekdis"
+
+    try {
+      const res = await fetch("/api/attributes/check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          memberId: selectedMember.id,
+          sessionNumber,
+          status,
+          checkedItems: checkedArray,
+          missingItems,
+          notes,
+          checkedByName: officerName,
+          recordViolation: !isComplete && recordViolation
+        })
+      })
+
+      const data = await res.json()
+
+      if (data.success) {
+        toast.success(
+          isComplete ? "Atribut Lengkap!" : `Tercatat Kurang (${missingItems.length} item)`,
+          {
+            description: `${selectedMember.name} (${selectedMember.nim}) • Sesi ${sessionNumber}`,
+            icon: isComplete ? <CheckCircle2 className="h-4 w-4 text-emerald-500" /> : <AlertTriangle className="h-4 w-4 text-amber-500" />
+          }
+        )
+
+        // Update local state checks
+        setChecks((prev) => ({
+          ...prev,
+          [selectedMember.id]: {
+            id: data.check?.id || selectedMember.id,
+            member_id: selectedMember.id,
+            session_number: sessionNumber,
+            status,
+            checked_items: checkedArray,
+            missing_items: missingItems,
+            notes,
+            checked_by: officerName,
+            checked_at: new Date().toISOString()
+          }
+        }))
+
+        // Tambah ke recent checks
+        setRecentCheckedMembers((prev) => [
+          selectedMember,
+          ...prev.filter((m) => m.id !== selectedMember.id).slice(0, 4)
+        ])
+
+        // Bersihkan seleksi & kembali fokus ke pencarian
+        setSelectedMember(null)
+        setSearchQuery("")
+        focusSearch()
+      } else {
+        if (data.needsSql) {
+          setNeedsSqlAlert(true)
+        }
+        toast.error(data.error || "Gagal menyimpan pemeriksaan")
+      }
+    } catch {
+      toast.error("Gagal terhubung ke server")
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  // Keyboard shortcut: Tekan Enter saat form aktif untuk menyimpan
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Enter" && (e.ctrlKey || e.metaKey || (e.target as HTMLElement).tagName !== "TEXTAREA")) {
+        if (selectedMember && !isSubmitting) {
+          e.preventDefault()
+          handleSaveCheck()
+        }
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown)
+    return () => window.removeEventListener("keydown", handleKeyDown)
+  })
+
+  // Filter list peserta di panel kiri
+  const filteredMembers = useMemo(() => {
+    const q = searchQuery.toLowerCase().trim()
+    return members.filter((m) => {
+      // Filter search
+      const matchesSearch =
+        !q ||
+        m.name.toLowerCase().includes(q) ||
+        m.nim.toLowerCase().includes(q) ||
+        (m.kelompok && m.kelompok.toLowerCase().includes(q))
+
+      if (!matchesSearch) return false
+
+      // Filter status
+      const check = checks[m.id]
+      if (statusFilter === "lengkap") return check?.status === "lengkap"
+      if (statusFilter === "kurang") return check?.status === "tidak_lengkap"
+      if (statusFilter === "belum") return !check
+
+      return true
+    })
+  }, [members, searchQuery, statusFilter, checks])
+
+  // Hitung ringkasan statistik
+  const stats = useMemo(() => {
+    let lengkap = 0
+    let kurang = 0
+    let belum = 0
+
+    members.forEach((m) => {
+      const c = checks[m.id]
+      if (!c) belum++
+      else if (c.status === "lengkap") lengkap++
+      else kurang++
+    })
+
+    return {
+      total: members.length,
+      lengkap,
+      kurang,
+      belum
+    }
+  }, [members, checks])
+
+  // ================= MODAL KELOLA ATRIBUT (SUPERADMIN) =================
+  const openManageModal = async () => {
+    setManageSession(sessionNumber)
+    setIsManageModalOpen(true)
+    try {
+      const res = await fetch(`/api/attributes/config?session=${sessionNumber}`)
+      const data = await res.json()
+      if (data.success && Array.isArray(data.items)) {
+        setManageItems(data.items)
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  const handleManageSessionChange = async (s: number) => {
+    setManageSession(s)
+    try {
+      const res = await fetch(`/api/attributes/config?session=${s}`)
+      const data = await res.json()
+      if (data.success && Array.isArray(data.items)) {
+        setManageItems(data.items)
+      }
+    } catch {
+      // ignore
+    }
+  }
+
+  const handleAddItem = () => {
+    if (!newItemName.trim()) {
+      toast.error("Nama atribut wajib diisi")
+      return
+    }
+
+    const newItem: AttributeItem = {
+      id: `item_${Date.now()}`,
+      session_number: manageSession,
+      name: newItemName.trim(),
+      category: newItemCategory,
+      detail: newItemDetail.trim() || undefined,
+      order_index: manageItems.length + 1
+    }
+
+    setManageItems((prev) => [...prev, newItem])
+    setNewItemName("")
+    setNewItemDetail("")
+    toast.success("Item ditambahkan ke daftar sementara")
+  }
+
+  const handleDeleteItem = (id: string) => {
+    setManageItems((prev) => prev.filter((item) => item.id !== id))
+  }
+
+  const handleSaveAllConfig = async () => {
+    setIsSavingConfig(true)
+    try {
+      const res = await fetch("/api/attributes/config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "save_all",
+          sessionNumber: manageSession,
+          items: manageItems
+        })
+      })
+      const data = await res.json()
+      if (data.success) {
+        toast.success(data.message || "Pengaturan atribut berhasil disimpan!")
+        if (manageSession === sessionNumber) {
+          setAttributeItems(manageItems)
+        }
+        setIsManageModalOpen(false)
+      } else {
+        if (data.needsSql) setNeedsSqlAlert(true)
+        toast.error(data.error || "Gagal menyimpan konfigurasi")
+      }
+    } catch {
+      toast.error("Gagal terhubung ke server")
+    } finally {
+      setIsSavingConfig(false)
+    }
+  }
+
+  const handleResetToDefault = async () => {
+    if (!confirm(`Kembalikan daftar atribut Sesi ${manageSession} ke standar handbook?`)) return
+    setIsSavingConfig(true)
+    try {
+      const res = await fetch("/api/attributes/config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "reset",
+          sessionNumber: manageSession
+        })
+      })
+      const data = await res.json()
+      if (data.success && data.items) {
+        setManageItems(data.items)
+        if (manageSession === sessionNumber) {
+          setAttributeItems(data.items)
+        }
+        toast.success(data.message)
+      } else {
+        if (data.needsSql) setNeedsSqlAlert(true)
+        toast.error(data.error || "Gagal mereset")
+      }
+    } catch {
+      toast.error("Gagal terhubung ke server")
+    } finally {
+      setIsSavingConfig(false)
+    }
+  }
+
+  // Kelompokkan item berdasarkan kategori
+  const groupedItems = useMemo(() => {
+    const dresscode = attributeItems.filter((i) => i.category === "dresscode")
+    const atribut = attributeItems.filter((i) => i.category === "atribut")
+    const tugas = attributeItems.filter((i) => i.category === "tugas")
+    return { dresscode, atribut, tugas }
+  }, [attributeItems])
+
+  // Hitung jumlah item terpilih
+  const totalItemCount = attributeItems.length
+  const checkedCount = attributeItems.filter((i) => checkedItemIds.has(i.id)).length
+  const isAllChecked = totalItemCount > 0 && checkedCount === totalItemCount
+  const rafiaInfo = getRafiaForKelompok(selectedMember?.kelompok)
+
+  return (
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans select-none">
+      {/* Top Header Minimalis */}
+      <header className="border-b bg-white/95 backdrop-blur-md sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto h-14 flex items-center justify-between px-3 sm:px-6">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Link
+              href="/dashboard"
+              className="p-1.5 text-slate-500 hover:text-slate-900 rounded-xl hover:bg-slate-100 transition-colors"
+              title="Kembali ke Dashboard"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Link>
+            <div className="flex items-center gap-1.5">
+              <img src="/logo.png" alt="OSI" className="h-6 w-6 object-contain" />
+              <span className="text-sm font-black tracking-tight text-slate-900">OSI 2026</span>
+              <span className="text-xs text-slate-300">•</span>
+              <span className="text-xs font-bold text-slate-700">Meja Sekdis (Cek Atribut)</span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            {/* Sesi Switcher */}
+            <div className="flex items-center bg-slate-100 p-0.5 rounded-xl border border-slate-200">
+              {[1, 2, 3].map((num) => (
+                <button
+                  key={num}
+                  type="button"
+                  onClick={() => {
+                    setSessionNumber(num)
+                    setSelectedMember(null)
+                  }}
+                  className={`px-2.5 py-1 text-xs font-bold rounded-lg transition-all flex items-center gap-1 ${
+                    sessionNumber === num
+                      ? "bg-white text-slate-900 shadow-2xs"
+                      : "text-slate-500 hover:text-slate-900"
+                  }`}
+                >
+                  <span className={`h-1.5 w-1.5 rounded-full ${sessionNumber === num ? "bg-emerald-500 animate-pulse" : "bg-transparent"}`} />
+                  <span>Sesi {num}</span>
+                </button>
+              ))}
+            </div>
+
+            {/* Tombol Kelola Atribut (Admin) */}
+            {isAdmin && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={openManageModal}
+                className="h-8 px-2.5 rounded-xl border-slate-200 bg-white text-slate-700 hover:bg-slate-100 text-xs font-bold gap-1 shadow-2xs"
+                title="Kelola Daftar Atribut"
+              >
+                <SlidersHorizontal className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Kelola Atribut</span>
+              </Button>
+            )}
+
+            {/* Tombol Refresh */}
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => {
+                fetchMembers()
+                fetchAttributeItems(sessionNumber)
+                fetchChecks(sessionNumber)
+                toast.info("Data diperbarui")
+              }}
+              className="h-8 w-8 rounded-xl text-slate-500 hover:text-slate-900"
+              title="Segarkan Data"
+            >
+              <RotateCw className="h-3.5 w-3.5" />
+            </Button>
+          </div>
+        </div>
+      </header>
+
+      {/* Alert jika SQL Supabase belum dijalankan */}
+      {needsSqlAlert && (
+        <div className="bg-amber-50 border-b border-amber-200 p-2.5 px-4 text-xs text-amber-900 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+            <span>
+              <strong>Perhatian:</strong> Skrip database untuk atribut belum dijalankan di Supabase. Sistem saat ini berjalan dengan penyimpanan lokal/default.
+            </span>
+          </div>
+          <button
+            onClick={() => {
+              navigator.clipboard.writeText(`CREATE TABLE IF NOT EXISTS public.attribute_items (
+  id TEXT PRIMARY KEY,
+  session_number INT NOT NULL,
+  name TEXT NOT NULL,
+  category TEXT NOT NULL CHECK (category IN ('dresscode', 'atribut', 'tugas')),
+  detail TEXT,
+  order_index INT DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
+);
+CREATE TABLE IF NOT EXISTS public.attribute_checks (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  member_id UUID REFERENCES public.members(id) ON DELETE CASCADE NOT NULL,
+  session_number INT NOT NULL,
+  status TEXT CHECK (status IN ('lengkap', 'tidak_lengkap')) NOT NULL DEFAULT 'lengkap',
+  checked_items TEXT[] DEFAULT '{}',
+  missing_items TEXT[] DEFAULT '{}',
+  notes TEXT,
+  checked_by TEXT,
+  checked_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
+  UNIQUE (member_id, session_number)
+);
+ALTER TABLE public.attribute_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.attribute_checks ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "Allow all for attribute_items" ON public.attribute_items FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Allow all for attribute_checks" ON public.attribute_checks FOR ALL USING (true) WITH CHECK (true);`)
+              toast.success("Skrip SQL berhasil disalin! Silakan paste di Supabase SQL Editor.")
+            }}
+            className="px-2 py-0.5 bg-amber-200 hover:bg-amber-300 text-amber-900 font-bold rounded text-[11px] shrink-0 inline-flex items-center gap-1"
+          >
+            <Copy className="h-3 w-3" /> Salin SQL
+          </button>
+        </div>
+      )}
+
+      {/* Main Dual-Panel Content */}
+      <main className="max-w-7xl mx-auto w-full flex-1 p-3 sm:p-5 grid grid-cols-1 lg:grid-cols-12 gap-4">
+        {/* ================= PANEL KIRI (PENCARIAN & DAFTAR MABA) ================= */}
+        <div className="lg:col-span-5 flex flex-col gap-3">
+          {/* Card Pencarian */}
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-3.5 shadow-2xs space-y-3">
+            {/* Input Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                ref={searchInputRef}
+                placeholder="Ketik NIM atau Nama maba..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                autoFocus
+                className="pl-9 pr-8 h-10 bg-slate-50 border-slate-200 rounded-xl text-xs sm:text-sm font-medium focus-visible:ring-slate-400"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => {
+                    setSearchQuery("")
+                    focusSearch()
+                  }}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-700"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+
+            {/* Filter Pills & Mini Stats */}
+            <div className="flex items-center justify-between text-[11px] font-bold">
+              <div className="flex items-center gap-1 bg-slate-100 p-0.5 rounded-lg border border-slate-200/60">
+                {(["semua", "belum", "lengkap", "kurang"] as const).map((f) => (
+                  <button
+                    key={f}
+                    onClick={() => setStatusFilter(f)}
+                    className={`px-2 py-0.5 rounded-md transition-all uppercase tracking-wider text-[10px] ${
+                      statusFilter === f
+                        ? "bg-white text-slate-900 shadow-2xs"
+                        : "text-slate-500 hover:text-slate-800"
+                    }`}
+                  >
+                    {f}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex items-center gap-1.5 text-slate-400 font-mono text-[10px]">
+                <span className="text-emerald-600 font-bold">{stats.lengkap} Lengkap</span>
+                <span>•</span>
+                <span className="text-amber-600 font-bold">{stats.kurang} Kurang</span>
+                <span>•</span>
+                <span>{stats.belum} Belum</span>
+              </div>
+            </div>
+          </div>
+
+          {/* List Peserta */}
+          <div className="bg-white border border-slate-200/80 rounded-2xl p-2 shadow-2xs flex-1 min-h-[350px] max-h-[580px] overflow-y-auto space-y-1.5">
+            {filteredMembers.length === 0 ? (
+              <div className="py-16 text-center text-slate-400 space-y-1">
+                <Search className="h-6 w-6 mx-auto text-slate-300" />
+                <p className="text-xs font-bold text-slate-700">Tidak ada peserta ditemukan</p>
+                <p className="text-[11px] text-slate-400">Coba ubah kata kunci pencarian atau filter.</p>
+              </div>
+            ) : (
+              filteredMembers.map((m) => {
+                const check = checks[m.id]
+                const isSelected = selectedMember?.id === m.id
+
+                return (
+                  <div
+                    key={m.id}
+                    onClick={() => handleSelectMember(m)}
+                    className={`p-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-2 ${
+                      isSelected
+                        ? "bg-slate-900 text-white border-slate-900 shadow-sm"
+                        : check?.status === "lengkap"
+                        ? "bg-emerald-50/50 hover:bg-emerald-50/80 border-emerald-100 text-slate-800"
+                        : check?.status === "tidak_lengkap"
+                        ? "bg-amber-50/50 hover:bg-amber-50/80 border-amber-100 text-slate-800"
+                        : "bg-white hover:bg-slate-50 border-slate-100 text-slate-800"
+                    }`}
+                  >
+                    <div className="overflow-hidden space-y-0.5">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-xs truncate">{m.name}</span>
+                        {m.kelompok && (
+                          <span
+                            className={`text-[9px] font-mono px-1.5 py-0.2 rounded font-semibold shrink-0 ${
+                              isSelected ? "bg-slate-800 text-slate-200" : "bg-slate-100 text-slate-600"
+                            }`}
+                          >
+                            {m.kelompok}
+                          </span>
+                        )}
+                      </div>
+                      <p className={`text-[11px] font-mono ${isSelected ? "text-slate-300" : "text-slate-400"}`}>
+                        {m.nim}
+                      </p>
+                    </div>
+
+                    {/* Status Pill */}
+                    <div className="shrink-0">
+                      {check ? (
+                        check.status === "lengkap" ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold font-mono px-2 py-0.5 rounded-md bg-emerald-500 text-white shadow-2xs">
+                            <Check className="h-3 w-3 stroke-[3]" /> Lengkap
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold font-mono px-2 py-0.5 rounded-md bg-amber-500 text-white shadow-2xs">
+                            <AlertTriangle className="h-3 w-3" /> Kurang {check.missing_items?.length || 1}
+                          </span>
+                        )
+                      ) : (
+                        <span
+                          className={`text-[10px] font-mono font-medium px-2 py-0.5 rounded-md ${
+                            isSelected ? "text-slate-400" : "text-slate-400 bg-slate-50 border border-slate-100"
+                          }`}
+                        >
+                          Belum
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )
+              })
+            )}
+          </div>
+
+          {/* 5 Maba Terakhir Diperiksa (Recent Checks) */}
+          {recentCheckedMembers.length > 0 && (
+            <div className="bg-white border border-slate-200/80 rounded-xl p-2.5 shadow-2xs space-y-1.5">
+              <span className="text-[10px] font-bold font-mono uppercase text-slate-400 block px-1">
+                Baru Saja Diperiksa:
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {recentCheckedMembers.map((rm) => (
+                  <button
+                    key={rm.id}
+                    onClick={() => handleSelectMember(rm)}
+                    className="text-[11px] font-semibold px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 flex items-center gap-1 transition-colors"
+                  >
+                    <span>{rm.name}</span>
+                    <span className="text-[10px] font-mono text-slate-400">({rm.nim})</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ================= PANEL KANAN (FORM CHECKLIST ATRIBUT) ================= */}
+        <div className="lg:col-span-7 flex flex-col">
+          {!selectedMember ? (
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-10 shadow-2xs flex-1 flex flex-col items-center justify-center text-center space-y-3">
+              <div className="h-12 w-12 rounded-2xl bg-slate-100 flex items-center justify-center text-slate-400">
+                <Shirt className="h-6 w-6" />
+              </div>
+              <div className="space-y-1 max-w-sm">
+                <h3 className="text-sm font-black text-slate-900">Belum Ada Peserta Dipilih</h3>
+                <p className="text-xs text-slate-500 leading-relaxed">
+                  Ketik NIM atau nama peserta pada kolom pencarian di sebelah kiri untuk membuka checklist atribut.
+                </p>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-white border border-slate-200/80 rounded-2xl p-4 sm:p-5 shadow-2xs flex-1 flex flex-col justify-between space-y-4 animate-in fade-in duration-150">
+              {/* Header Peserta Terpilih */}
+              <div className="space-y-3 pb-3 border-b border-slate-100">
+                <div className="flex items-start justify-between gap-3 flex-wrap">
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <h2 className="text-base sm:text-lg font-black text-slate-900 tracking-tight leading-tight">
+                        {selectedMember.name}
+                      </h2>
+                      <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-slate-100 text-slate-700">
+                        {selectedMember.nim}
+                      </span>
+                    </div>
+                    <p className="text-xs text-slate-500 font-medium">
+                      {selectedMember.kelompok || "Tanpa Kelompok"} • Sesi {sessionNumber}
+                    </p>
+                  </div>
+
+                  {/* Riwayat status jika sudah dicek sebelumnya */}
+                  {checks[selectedMember.id] && (
+                    <div className="text-right font-mono text-[10px]">
+                      <span
+                        className={`font-bold px-2 py-0.5 rounded ${
+                          checks[selectedMember.id].status === "lengkap"
+                            ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                            : "bg-amber-50 text-amber-700 border border-amber-200"
+                        }`}
+                      >
+                        {checks[selectedMember.id].status === "lengkap" ? "Sudah Lengkap" : "Sudah Dicek (Kurang)"}
+                      </span>
+                      <p className="text-slate-400 mt-0.5">
+                        Oleh: {checks[selectedMember.id].checked_by || "Sekdis"}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Petunjuk Khusus Warna Tali Rafia untuk Sesi 2 & 3 */}
+                {(sessionNumber === 2 || sessionNumber === 3) && rafiaInfo && (
+                  <div className={`p-2.5 rounded-xl border flex items-center justify-between text-xs font-bold ${rafiaInfo.bgClass}`}>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-mono uppercase text-slate-500">Ketentuan Tali Rafia:</span>
+                      <span className={rafiaInfo.textClass}>{rafiaInfo.label}</span>
+                    </div>
+                    <span className="text-[11px] font-mono text-slate-500 font-normal">
+                      {sessionNumber === 2 ? "(Sabuk Ikat Pinggang)" : "(Panjang 1 Meter)"}
+                    </span>
+                  </div>
+                )}
+
+                {/* Fast Track Buttons & Counter */}
+                <div className="flex items-center justify-between gap-2 pt-1">
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={handleCheckAll}
+                      className="h-8 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs gap-1.5 shadow-2xs"
+                    >
+                      <Check className="h-3.5 w-3.5 stroke-[3]" />
+                      <span>Lengkap Semua</span>
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleClearAll}
+                      className="h-8 px-2.5 rounded-xl border-slate-200 text-slate-600 hover:bg-slate-100 font-bold text-xs"
+                    >
+                      Kosongkan
+                    </Button>
+                  </div>
+
+                  {/* Progress Counter */}
+                  <div className="text-right">
+                    <span className={`text-xs font-mono font-bold ${isAllChecked ? "text-emerald-600" : "text-slate-600"}`}>
+                      {checkedCount} / {totalItemCount} Item
+                    </span>
+                    <span className="text-[10px] font-mono text-slate-400 ml-1">
+                      ({isAllChecked ? "Lengkap" : `Kurang ${totalItemCount - checkedCount}`})
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Daftar Checklist Grouped */}
+              <div className="space-y-4 overflow-y-auto max-h-[380px] pr-1">
+                {/* 1. Dresscode */}
+                {groupedItems.dresscode.length > 0 && (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      <Shirt className="h-3.5 w-3.5 text-slate-500" />
+                      <span>Dresscode & Pakaian</span>
+                    </div>
+                    <div className="space-y-1">
+                      {groupedItems.dresscode.map((item) => {
+                        const isChecked = checkedItemIds.has(item.id)
+                        return (
+                          <div
+                            key={item.id}
+                            onClick={() => handleToggleItem(item.id)}
+                            className={`p-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                              isChecked
+                                ? "bg-emerald-50/70 border-emerald-200 text-slate-900"
+                                : "bg-white hover:bg-slate-50 border-slate-200 text-slate-700"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5 overflow-hidden">
+                              <div
+                                className={`h-5 w-5 rounded-md border flex items-center justify-center transition-colors shrink-0 ${
+                                  isChecked
+                                    ? "bg-emerald-600 border-emerald-600 text-white"
+                                    : "border-slate-300 bg-white"
+                                }`}
+                              >
+                                {isChecked && <Check className="h-3.5 w-3.5 stroke-[3]" />}
+                              </div>
+                              <span className="text-xs font-semibold">{item.name}</span>
+                            </div>
+                            {item.detail && (
+                              <span className="text-[10px] font-mono text-slate-400 shrink-0 hidden sm:inline">
+                                {item.detail}
+                              </span>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* 2. Atribut Bawaan */}
+                {groupedItems.atribut.length > 0 && (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      <ShoppingBag className="h-3.5 w-3.5 text-slate-500" />
+                      <span>Atribut Bawaan & Konsumsi</span>
+                    </div>
+                    <div className="space-y-1">
+                      {groupedItems.atribut.map((item) => {
+                        const isChecked = checkedItemIds.has(item.id)
+                        return (
+                          <div
+                            key={item.id}
+                            onClick={() => handleToggleItem(item.id)}
+                            className={`p-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                              isChecked
+                                ? "bg-emerald-50/70 border-emerald-200 text-slate-900"
+                                : "bg-white hover:bg-slate-50 border-slate-200 text-slate-700"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5 overflow-hidden">
+                              <div
+                                className={`h-5 w-5 rounded-md border flex items-center justify-center transition-colors shrink-0 ${
+                                  isChecked
+                                    ? "bg-emerald-600 border-emerald-600 text-white"
+                                    : "border-slate-300 bg-white"
+                                }`}
+                              >
+                                {isChecked && <Check className="h-3.5 w-3.5 stroke-[3]" />}
+                              </div>
+                              <span className="text-xs font-semibold">{item.name}</span>
+                            </div>
+                            {item.detail && (
+                              <span className="text-[10px] font-mono text-slate-400 shrink-0 hidden sm:inline">
+                                {item.detail}
+                              </span>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* 3. Tugas Fisik */}
+                {groupedItems.tugas.length > 0 && (
+                  <div className="space-y-1.5">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      <FileText className="h-3.5 w-3.5 text-slate-500" />
+                      <span>Penugasan Fisik (Kertas/Folio)</span>
+                    </div>
+                    <div className="space-y-1">
+                      {groupedItems.tugas.map((item) => {
+                        const isChecked = checkedItemIds.has(item.id)
+                        return (
+                          <div
+                            key={item.id}
+                            onClick={() => handleToggleItem(item.id)}
+                            className={`p-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                              isChecked
+                                ? "bg-emerald-50/70 border-emerald-200 text-slate-900"
+                                : "bg-white hover:bg-slate-50 border-slate-200 text-slate-700"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5 overflow-hidden">
+                              <div
+                                className={`h-5 w-5 rounded-md border flex items-center justify-center transition-colors shrink-0 ${
+                                  isChecked
+                                    ? "bg-emerald-600 border-emerald-600 text-white"
+                                    : "border-slate-300 bg-white"
+                                }`}
+                              >
+                                {isChecked && <Check className="h-3.5 w-3.5 stroke-[3]" />}
+                              </div>
+                              <span className="text-xs font-semibold">{item.name}</span>
+                            </div>
+                            {item.detail && (
+                              <span className="text-[10px] font-mono text-slate-400 shrink-0 hidden sm:inline">
+                                {item.detail}
+                              </span>
+                            )}
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Bottom Actions: Catatan, Opsi Komdis & Tombol Simpan */}
+              <div className="space-y-3 pt-3 border-t border-slate-100">
+                {/* Catatan Petugas */}
+                <div className="space-y-1">
+                  <Input
+                    placeholder="Catatan tambahan (opsional: misal barang disita atau izin khusus)..."
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    className="h-9 bg-slate-50 border-slate-200 rounded-xl text-xs font-medium"
+                  />
+                </div>
+
+                {/* Checkbox integrasi sanksi Komdis jika ada yang kurang */}
+                {!isAllChecked && (
+                  <label className="flex items-center gap-2 text-xs font-bold text-amber-800 bg-amber-50 border border-amber-200 p-2.5 rounded-xl cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={recordViolation}
+                      onChange={(e) => setRecordViolation(e.target.checked)}
+                      className="rounded border-amber-300 text-amber-600 focus:ring-amber-400 h-4 w-4"
+                    />
+                    <span>Otomatis catat sanksi ringan ke Sistem Kedisiplinan Komdis</span>
+                  </label>
+                )}
+
+                {/* Primary Submit Button */}
+                <Button
+                  onClick={handleSaveCheck}
+                  disabled={isSubmitting}
+                  className={`w-full h-12 rounded-xl font-black text-sm tracking-wide shadow-xs transition-all active:scale-[0.99] flex items-center justify-center gap-2 ${
+                    isAllChecked
+                      ? "bg-emerald-600 hover:bg-emerald-700 text-white"
+                      : "bg-slate-900 hover:bg-black text-white"
+                  }`}
+                >
+                  <Check className="h-4 w-4 stroke-[3]" />
+                  <span>
+                    {isSubmitting
+                      ? "Menyimpan Pemeriksaan..."
+                      : isAllChecked
+                      ? "Simpan Pemeriksaan (Lengkap)"
+                      : `Simpan Pemeriksaan (Kurang ${totalItemCount - checkedCount} Item)`}
+                  </span>
+                  <span className="text-[11px] font-mono font-normal opacity-75 hidden sm:inline">[Tekan Enter]</span>
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      </main>
+
+      {/* ================= MODAL KELOLA ATRIBUT (KHUSUS SUPERADMIN) ================= */}
+      <Dialog open={isManageModalOpen} onOpenChange={setIsManageModalOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl p-5 sm:p-6 bg-white">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-lg font-black text-slate-900">
+                Kelola Daftar Atribut (Superadmin)
+              </DialogTitle>
+            </div>
+            <DialogDescription className="text-xs text-slate-500">
+              Ubah, tambah, atau hapus daftar atribut peserta per hari. Perubahan langsung aktif di meja Sekdis.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 pt-2">
+            {/* Tab Pilihan Sesi */}
+            <div className="flex items-center justify-between bg-slate-100 p-1 rounded-xl">
+              <div className="flex items-center gap-1">
+                {[1, 2, 3].map((num) => (
+                  <button
+                    key={num}
+                    type="button"
+                    onClick={() => handleManageSessionChange(num)}
+                    className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                      manageSession === num
+                        ? "bg-white text-slate-900 shadow-2xs"
+                        : "text-slate-500 hover:text-slate-900"
+                    }`}
+                  >
+                    Day {num}
+                  </button>
+                ))}
+              </div>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleResetToDefault}
+                disabled={isSavingConfig}
+                className="text-[11px] font-bold text-slate-500 hover:text-red-600 h-7"
+              >
+                Reset Default Handbook
+              </Button>
+            </div>
+
+            {/* Form Tambah Item Baru */}
+            <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3 space-y-2">
+              <span className="text-[10px] font-bold font-mono uppercase text-slate-500 block">
+                + Tambah Item Atribut Baru (Day {manageSession})
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
+                <div className="sm:col-span-6">
+                  <Input
+                    placeholder="Nama item (contoh: Kaos Kaki Putih)..."
+                    value={newItemName}
+                    onChange={(e) => setNewItemName(e.target.value)}
+                    className="h-8 bg-white text-xs rounded-lg"
+                  />
+                </div>
+                <div className="sm:col-span-3">
+                  <select
+                    value={newItemCategory}
+                    onChange={(e) => setNewItemCategory(e.target.value as "dresscode" | "atribut" | "tugas")}
+                    className="w-full h-8 bg-white border border-slate-200 rounded-lg text-xs font-semibold px-2 text-slate-700"
+                  >
+                    <option value="dresscode">Dresscode</option>
+                    <option value="atribut">Atribut</option>
+                    <option value="tugas">Tugas Fisik</option>
+                  </select>
+                </div>
+                <div className="sm:col-span-3">
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleAddItem}
+                    className="w-full h-8 bg-slate-900 hover:bg-black text-white text-xs font-bold rounded-lg gap-1"
+                  >
+                    <Plus className="h-3 w-3" /> Tambah
+                  </Button>
+                </div>
+              </div>
+              <Input
+                placeholder="Keterangan spesifikasi opsional (contoh: Lengan panjang rapi)..."
+                value={newItemDetail}
+                onChange={(e) => setNewItemDetail(e.target.value)}
+                className="h-7 bg-white text-[11px] rounded-lg"
+              />
+            </div>
+
+            {/* List Item Saat Ini */}
+            <div className="space-y-1.5 max-h-[300px] overflow-y-auto pr-1">
+              <span className="text-[10px] font-mono font-bold text-slate-400 block px-1">
+                Daftar Item Day {manageSession} ({manageItems.length} Item):
+              </span>
+
+              {manageItems.map((item, idx) => (
+                <div
+                  key={item.id || idx}
+                  className="p-2 rounded-xl bg-white border border-slate-200 flex items-center justify-between gap-2 text-xs"
+                >
+                  <div className="flex items-center gap-2 overflow-hidden">
+                    <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 uppercase">
+                      {item.category}
+                    </span>
+                    <span className="font-bold text-slate-800 truncate">{item.name}</span>
+                    {item.detail && (
+                      <span className="text-[10px] text-slate-400 font-mono truncate hidden sm:inline">
+                        ({item.detail})
+                      </span>
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteItem(item.id)}
+                    className="p-1 text-slate-400 hover:text-red-600 rounded transition-colors shrink-0"
+                    title="Hapus Item"
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ))}
+            </div>
+
+            {/* Tombol Simpan Perubahan Modal */}
+            <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsManageModalOpen(false)}
+                className="rounded-xl text-xs font-bold"
+              >
+                Batal
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleSaveAllConfig}
+                disabled={isSavingConfig}
+                className="rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-black px-4"
+              >
+                {isSavingConfig ? "Menyimpan..." : "Simpan Perubahan Atribut"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  )
+}
