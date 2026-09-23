@@ -55,8 +55,7 @@ export async function POST(request: Request) {
       checkedItems = [],
       missingItems = [],
       notes = "",
-      checkedByName = "Petugas Sekdis",
-      recordViolation = false
+      checkedByName = "Petugas Sekdis"
     } = body
 
     if (!memberId) {
@@ -93,26 +92,6 @@ export async function POST(request: Request) {
         }, { status: 400 })
       }
       return NextResponse.json({ success: false, error: checkErr.message }, { status: 500 })
-    }
-
-    // 2. Jika ada item yang kurang dan panitia memilih mencatat ke pelanggaran Komdis
-    if (recordViolation && missingItems.length > 0) {
-      try {
-        const violationText = `Atribut/Perlengkapan tidak lengkap: ${missingItems.join(", ")}`
-        await supabase.from("violations").insert({
-          member_id: memberId,
-          violation_type: "ringan",
-          session_number: sessionNumber,
-          violation_category: "Sanksi Ringan",
-          consequence: "Melengkapi atribut pada sesi berikutnya",
-          status: "pending",
-          chronology: violationText,
-          notes: notes ? `${violationText} (Catatan: ${notes})` : violationText,
-          recorded_by: null
-        })
-      } catch {
-        // Abaikan kegagalan insert pelanggaran agar tidak membatalkan pemeriksaan atribut
-      }
     }
 
     return NextResponse.json({

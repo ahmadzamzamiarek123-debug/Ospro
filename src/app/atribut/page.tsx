@@ -63,7 +63,6 @@ export default function AttributeCheckPage() {
   // Checklist Form State
   const [checkedItemIds, setCheckedItemIds] = useState<Set<string>>(new Set())
   const [notes, setNotes] = useState<string>("")
-  const [recordViolation, setRecordViolation] = useState<boolean>(true)
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false)
   const [recentCheckedMembers, setRecentCheckedMembers] = useState<Member[]>([])
 
@@ -249,8 +248,7 @@ export default function AttributeCheckPage() {
           checkedItems: checkedArray,
           missingItems,
           notes,
-          checkedByName: officerName,
-          recordViolation: !isComplete && recordViolation
+          checkedByName: officerName
         })
       })
 
@@ -647,9 +645,11 @@ export default function AttributeCheckPage() {
               <strong>Perhatian:</strong> Skrip database untuk atribut belum dijalankan di Supabase. Sistem saat ini berjalan dengan penyimpanan lokal/default.
             </span>
           </div>
-          <button
-            onClick={() => {
-              navigator.clipboard.writeText(`CREATE TABLE IF NOT EXISTS public.attribute_items (
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(`-- 1. TABEL ATTRIBUTE_ITEMS
+CREATE TABLE IF NOT EXISTS public.attribute_items (
   id TEXT PRIMARY KEY,
   session_number INT NOT NULL,
   name TEXT NOT NULL,
@@ -658,6 +658,8 @@ export default function AttributeCheckPage() {
   order_index INT DEFAULT 0,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL
 );
+
+-- 2. TABEL ATTRIBUTE_CHECKS
 CREATE TABLE IF NOT EXISTS public.attribute_checks (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   member_id UUID REFERENCES public.members(id) ON DELETE CASCADE NOT NULL,
@@ -670,16 +672,78 @@ CREATE TABLE IF NOT EXISTS public.attribute_checks (
   checked_at TIMESTAMP WITH TIME ZONE DEFAULT TIMEZONE('utc'::text, NOW()) NOT NULL,
   UNIQUE (member_id, session_number)
 );
+
+-- 3. RLS & POLICIES
 ALTER TABLE public.attribute_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.attribute_checks ENABLE ROW LEVEL SECURITY;
-CREATE POLICY "Allow all for attribute_items" ON public.attribute_items FOR ALL USING (true) WITH CHECK (true);
-CREATE POLICY "Allow all for attribute_checks" ON public.attribute_checks FOR ALL USING (true) WITH CHECK (true);`)
-              toast.success("Skrip SQL berhasil disalin! Silakan paste di Supabase SQL Editor.")
-            }}
-            className="px-2 py-0.5 bg-amber-200 hover:bg-amber-300 text-amber-900 font-bold rounded text-[11px] shrink-0 inline-flex items-center gap-1"
-          >
-            <Copy className="h-3 w-3" /> Salin SQL
-          </button>
+DO $$ BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'attribute_items' AND policyname = 'Allow all for attribute_items') THEN
+    CREATE POLICY "Allow all for attribute_items" ON public.attribute_items FOR ALL USING (true) WITH CHECK (true);
+  END IF;
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE tablename = 'attribute_checks' AND policyname = 'Allow all for attribute_checks') THEN
+    CREATE POLICY "Allow all for attribute_checks" ON public.attribute_checks FOR ALL USING (true) WITH CHECK (true);
+  END IF;
+END $$;
+
+-- 4. SEED DATA DEFAULT (DAY 1-3)
+INSERT INTO public.attribute_items (id, session_number, name, category, detail, order_index) VALUES
+  ('d1_kemeja', 1, 'Kemeja putih', 'dresscode', 'Lengan panjang rapi', 1),
+  ('d1_celana', 1, 'Celana kain hitam', 'dresscode', 'Standar non-jeans', 2),
+  ('d1_pantofel', 1, 'Sepatu pantofel', 'dresscode', 'Pantofel formal', 3),
+  ('d1_kaoskaki', 1, 'Kaos kaki putih', 'dresscode', 'Warna putih polos', 4),
+  ('d1_ikatpinggang', 1, 'Ikat pinggang warna hitam', 'dresscode', 'Standar formal', 5),
+  ('d1_hijab', 1, 'Hijab hitam segi empat paris', 'dresscode', 'No rawis (khusus mahasiswi)', 6),
+  ('d1_nametag', 1, 'Nametag bekas PKKMB USG 2026', 'atribut', 'Wajib dipakai/dibawa', 7),
+  ('d1_bulu', 1, 'Bulu Ayam satu helai warna putih', 'atribut', '1 helai bersih', 8),
+  ('d1_tumbler', 1, 'Tumbler berisi air mineral full', 'atribut', 'Berisi penuh', 9),
+  ('d1_konsumsi', 1, '1pcs Roti + 1pcs Susu Ultra Milk 200ml', 'atribut', 'Susu rasa bebas', 10),
+  ('d1_snack', 1, '3pcs Snack berwarna HIJAU', 'atribut', 'Kemasan dominan hijau', 11),
+  ('d1_tugas_logo', 1, 'Gambar Logo HIMASI (kertas A4)', 'tugas', 'Tulis tangan manual, dilarang jiplak', 12),
+  ('d2_batik', 2, 'Baju Batik', 'dresscode', 'Batik sopan & rapi', 1),
+  ('d2_celana', 2, 'Celana kain hitam', 'dresscode', 'Standar non-jeans', 2),
+  ('d2_pantofel', 2, 'Sepatu pantofel', 'dresscode', 'Pantofel formal', 3),
+  ('d2_kaoskaki', 2, 'Kaos kaki Kanan PUTIH, Kiri HITAM', 'dresscode', 'Kanan putih, kiri hitam', 4),
+  ('d2_rafia', 2, 'Tali rafia warna kelompok (ikat pinggang)', 'dresscode', 'Dijadikan ikat pinggang sesuai warna kelompok', 5),
+  ('d2_hijab', 2, 'Hijab hitam', 'dresscode', 'Khusus mahasiswi', 6),
+  ('d2_nametag', 2, 'Nametag bekas PKKMB USG 2026', 'atribut', 'Wajib dipakai/dibawa', 7),
+  ('d2_bulu', 2, 'Bulu Ayam dari DAY 1', 'atribut', 'Lanjutan dari hari pertama', 8),
+  ('d2_tumbler', 2, 'Tumbler berisi air mineral full', 'atribut', 'Berisi penuh', 9),
+  ('d2_konsumsi', 2, '1pcs Roti + 1pcs Susu Ultra Milk 200ml', 'atribut', 'Susu rasa bebas', 10),
+  ('d2_snack', 2, '3pcs Snack berwarna PUTIH', 'atribut', 'Kemasan dominan putih', 11),
+  ('d2_tugas_aboutme', 2, 'Tugas About Me (Folio)', 'tugas', 'Rangkuman 5 teman + foto bersama di Folio', 12),
+  ('d2_tugas_materi', 2, 'Rangkuman Materi 1 & Materi 2', 'tugas', 'Ditulis tangan rapi', 13),
+  ('d3_kaos', 3, 'Kaos putih lengan panjang', 'dresscode', 'Kaos sopan lengan panjang', 1),
+  ('d3_training', 3, 'Celana training hitam', 'dresscode', 'Tidak boleh ketat', 2),
+  ('d3_sepatu', 3, 'Sepatu Sport (bebas warna)', 'dresscode', 'Sepatu olahraga', 3),
+  ('d3_topi', 3, 'Topi hitam polos', 'dresscode', 'Polos tanpa logo mencolok', 4),
+  ('d3_rafia', 3, 'Tali rafia warna kelompok (panjang 1 meter)', 'dresscode', 'Panjang 1 meter sesuai warna kelompok', 5),
+  ('d3_hijab', 3, 'Hijab sport hitam', 'dresscode', 'Khusus mahasiswi', 6),
+  ('d3_nametag', 3, 'Nametag bekas PKKMB USG 2026', 'atribut', 'Wajib dipakai/dibawa', 7),
+  ('d3_bulu', 3, 'Bulu Ayam dari DAY 2', 'atribut', 'Lanjutan dari hari sebelumnya', 8),
+  ('d3_tumbler', 3, 'Tumbler berisi air mineral full', 'atribut', 'Berisi penuh', 9),
+  ('d3_konsumsi', 3, '1pcs Roti + 1pcs Susu Ultra Milk 200ml', 'atribut', 'Susu rasa bebas', 10),
+  ('d3_snack', 3, '5pcs Jajanan Tradisional (bebas)', 'atribut', 'Jajanan pasar / tradisional', 11),
+  ('d3_tugas_materi', 3, 'Rangkuman Materi 3 & Materi 4', 'tugas', 'Ditulis tangan rapi', 12)
+ON CONFLICT (id) DO UPDATE SET
+  name = EXCLUDED.name,
+  category = EXCLUDED.category,
+  detail = EXCLUDED.detail,
+  order_index = EXCLUDED.order_index;`)
+                toast.success("Skrip SQL lengkap berhasil disalin! Silakan paste di Supabase SQL Editor.")
+              }}
+              className="px-2.5 py-1 bg-amber-200 hover:bg-amber-300 text-amber-900 font-bold rounded-lg text-[11px] shrink-0 inline-flex items-center gap-1 shadow-2xs"
+            >
+              <Copy className="h-3 w-3" /> Salin SQL
+            </button>
+            <a
+              href="https://supabase.com/dashboard/project/gxurepfvxoijonntbcga/sql/new"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-2.5 py-1 bg-slate-900 hover:bg-black text-white font-bold rounded-lg text-[11px] shrink-0 inline-flex items-center gap-1 shadow-2xs"
+            >
+              Buka Supabase SQL Editor ↗
+            </a>
+          </div>
         </div>
       )}
 
@@ -1191,19 +1255,6 @@ CREATE POLICY "Allow all for attribute_checks" ON public.attribute_checks FOR AL
                     className="h-9 bg-slate-50 border-slate-200 rounded-xl text-xs font-medium"
                   />
                 </div>
-
-                {/* Checkbox integrasi sanksi Komdis jika ada yang kurang */}
-                {!isAllChecked && (
-                  <label className="flex items-center gap-2 text-xs font-bold text-amber-800 bg-amber-50 border border-amber-200 p-2.5 rounded-xl cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={recordViolation}
-                      onChange={(e) => setRecordViolation(e.target.checked)}
-                      className="rounded border-amber-300 text-amber-600 focus:ring-amber-400 h-4 w-4"
-                    />
-                    <span>Otomatis catat sanksi ringan ke Sistem Kedisiplinan Komdis</span>
-                  </label>
-                )}
 
                 {/* Primary Submit Button */}
                 <Button
