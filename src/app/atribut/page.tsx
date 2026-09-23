@@ -16,6 +16,7 @@ import {
   RotateCw, 
   Plus, 
   Trash2, 
+  Pencil,
   SlidersHorizontal,
   Shirt,
   ShoppingBag,
@@ -74,6 +75,7 @@ export default function AttributeCheckPage() {
   const [newItemName, setNewItemName] = useState<string>("")
   const [newItemCategory, setNewItemCategory] = useState<"dresscode" | "atribut" | "tugas">("atribut")
   const [newItemDetail, setNewItemDetail] = useState<string>("")
+  const [editingItemId, setEditingItemId] = useState<string | null>(null)
   const [needsSqlAlert, setNeedsSqlAlert] = useState<boolean>(false)
 
   const searchInputRef = useRef<HTMLInputElement>(null)
@@ -394,6 +396,26 @@ export default function AttributeCheckPage() {
       return
     }
 
+    if (editingItemId) {
+      setManageItems((prev) =>
+        prev.map((item) =>
+          item.id === editingItemId
+            ? {
+                ...item,
+                name: newItemName.trim(),
+                category: newItemCategory,
+                detail: newItemDetail.trim() || undefined
+              }
+            : item
+        )
+      )
+      setEditingItemId(null)
+      setNewItemName("")
+      setNewItemDetail("")
+      toast.success("Perubahan item berhasil diperbarui!")
+      return
+    }
+
     const newItem: AttributeItem = {
       id: `item_${Date.now()}`,
       session_number: manageSession,
@@ -409,7 +431,23 @@ export default function AttributeCheckPage() {
     toast.success("Item ditambahkan ke daftar sementara")
   }
 
+  const handleStartEdit = (item: AttributeItem) => {
+    setEditingItemId(item.id)
+    setNewItemName(item.name)
+    setNewItemCategory(item.category)
+    setNewItemDetail(item.detail || "")
+  }
+
+  const handleCancelEdit = () => {
+    setEditingItemId(null)
+    setNewItemName("")
+    setNewItemDetail("")
+  }
+
   const handleDeleteItem = (id: string) => {
+    if (editingItemId === id) {
+      handleCancelEdit()
+    }
     setManageItems((prev) => prev.filter((item) => item.id !== id))
   }
 
@@ -480,6 +518,42 @@ export default function AttributeCheckPage() {
     const tugas = attributeItems.filter((i) => i.category === "tugas")
     return { dresscode, atribut, tugas }
   }, [attributeItems])
+
+  // Kelompokkan item di modal kelola atribut (Superadmin)
+  const manageGrouped = useMemo(() => {
+    const dresscode = manageItems.filter((i) => i.category === "dresscode")
+    const atribut = manageItems.filter((i) => i.category === "atribut")
+    const tugas = manageItems.filter((i) => i.category === "tugas")
+    return { dresscode, atribut, tugas }
+  }, [manageItems])
+
+  // Centang per kategori (Dresscode sendiri, Atribut sendiri, Tugas sendiri)
+  const handleCheckCategory = (category: "dresscode" | "atribut" | "tugas") => {
+    const categoryItemIds = groupedItems[category].map((item) => item.id)
+    if (categoryItemIds.length === 0) return
+    setCheckedItemIds((prev) => {
+      const next = new Set(prev)
+      const allCategoryChecked = categoryItemIds.every((id) => next.has(id))
+      
+      if (allCategoryChecked) {
+        // Jika sudah lengkap, batalkan centang kategori ini
+        categoryItemIds.forEach((id) => next.delete(id))
+      } else {
+        // Jika belum lengkap, centang semua item di kategori ini
+        categoryItemIds.forEach((id) => next.add(id))
+      }
+      return next
+    })
+  }
+
+  const dresscodeCount = groupedItems.dresscode.filter((i) => checkedItemIds.has(i.id)).length
+  const isDresscodeComplete = groupedItems.dresscode.length > 0 && dresscodeCount === groupedItems.dresscode.length
+
+  const atributCount = groupedItems.atribut.filter((i) => checkedItemIds.has(i.id)).length
+  const isAtributComplete = groupedItems.atribut.length > 0 && atributCount === groupedItems.atribut.length
+
+  const tugasCount = groupedItems.tugas.filter((i) => checkedItemIds.has(i.id)).length
+  const isTugasComplete = groupedItems.tugas.length > 0 && tugasCount === groupedItems.tugas.length
 
   // Hitung jumlah item terpilih
   const totalItemCount = attributeItems.length
@@ -827,36 +901,87 @@ CREATE POLICY "Allow all for attribute_checks" ON public.attribute_checks FOR AL
                   </div>
                 )}
 
-                {/* Fast Track Buttons & Counter */}
-                <div className="flex items-center justify-between gap-2 pt-1">
-                  <div className="flex items-center gap-1.5">
-                    <Button
-                      type="button"
-                      size="sm"
-                      onClick={handleCheckAll}
-                      className="h-8 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs gap-1.5 shadow-2xs"
-                    >
-                      <Check className="h-3.5 w-3.5 stroke-[3]" />
-                      <span>Lengkap Semua</span>
-                    </Button>
+                {/* Fast Track Buttons Per Kategori & Counter */}
+                <div className="flex items-center justify-between gap-2 pt-1 flex-wrap">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {/* Tombol Kategori: Dresscode */}
+                    {groupedItems.dresscode.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => handleCheckCategory("dresscode")}
+                        className={`h-7 px-2.5 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 border shadow-2xs ${
+                          isDresscodeComplete
+                            ? "bg-emerald-600 text-white border-emerald-600"
+                            : "bg-white hover:bg-slate-100 text-slate-700 border-slate-200"
+                        }`}
+                        title="Klik untuk centang/batalkan semua Dresscode"
+                      >
+                        <Shirt className="h-3 w-3" />
+                        <span>{isDresscodeComplete ? "Dresscode ✓" : "Lengkap Dresscode"}</span>
+                      </button>
+                    )}
 
-                    <Button
+                    {/* Tombol Kategori: Atribut */}
+                    {groupedItems.atribut.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => handleCheckCategory("atribut")}
+                        className={`h-7 px-2.5 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 border shadow-2xs ${
+                          isAtributComplete
+                            ? "bg-emerald-600 text-white border-emerald-600"
+                            : "bg-white hover:bg-slate-100 text-slate-700 border-slate-200"
+                        }`}
+                        title="Klik untuk centang/batalkan semua Atribut"
+                      >
+                        <ShoppingBag className="h-3 w-3" />
+                        <span>{isAtributComplete ? "Atribut ✓" : "Lengkap Atribut"}</span>
+                      </button>
+                    )}
+
+                    {/* Tombol Kategori: Tugas */}
+                    {groupedItems.tugas.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={() => handleCheckCategory("tugas")}
+                        className={`h-7 px-2.5 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1 border shadow-2xs ${
+                          isTugasComplete
+                            ? "bg-emerald-600 text-white border-emerald-600"
+                            : "bg-white hover:bg-slate-100 text-slate-700 border-slate-200"
+                        }`}
+                        title="Klik untuk centang/batalkan semua Tugas"
+                      >
+                        <FileText className="h-3 w-3" />
+                        <span>{isTugasComplete ? "Tugas ✓" : "Lengkap Tugas"}</span>
+                      </button>
+                    )}
+
+                    {/* Master Centang Semua */}
+                    <button
                       type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={handleClearAll}
-                      className="h-8 px-2.5 rounded-xl border-slate-200 text-slate-600 hover:bg-slate-100 font-bold text-xs"
+                      onClick={handleCheckAll}
+                      className="h-7 px-2.5 rounded-lg text-[11px] font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-colors"
+                      title="Centang semua item sekaligus"
                     >
-                      Kosongkan
-                    </Button>
+                      Semua
+                    </button>
+
+                    {/* Kosongkan */}
+                    <button
+                      type="button"
+                      onClick={handleClearAll}
+                      className="h-7 px-2 rounded-lg text-[11px] font-medium text-slate-400 hover:text-slate-700 transition-colors"
+                      title="Kosongkan centang"
+                    >
+                      Reset
+                    </button>
                   </div>
 
                   {/* Progress Counter */}
-                  <div className="text-right">
-                    <span className={`text-xs font-mono font-bold ${isAllChecked ? "text-emerald-600" : "text-slate-600"}`}>
+                  <div className="text-right font-mono">
+                    <span className={`text-xs font-bold ${isAllChecked ? "text-emerald-600" : "text-slate-600"}`}>
                       {checkedCount} / {totalItemCount} Item
                     </span>
-                    <span className="text-[10px] font-mono text-slate-400 ml-1">
+                    <span className="text-[10px] text-slate-400 ml-1">
                       ({isAllChecked ? "Lengkap" : `Kurang ${totalItemCount - checkedCount}`})
                     </span>
                   </div>
@@ -868,26 +993,43 @@ CREATE POLICY "Allow all for attribute_checks" ON public.attribute_checks FOR AL
                 {/* 1. Dresscode */}
                 {groupedItems.dresscode.length > 0 && (
                   <div className="space-y-1.5">
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 uppercase tracking-wider">
-                      <Shirt className="h-3.5 w-3.5 text-slate-500" />
-                      <span>Dresscode & Pakaian</span>
+                    <div className="flex items-center justify-between text-xs pb-0.5">
+                      <div className="flex items-center gap-1.5 font-bold text-slate-700 uppercase tracking-wider">
+                        <Shirt className="h-3.5 w-3.5 text-slate-500" />
+                        <span>Dresscode & Pakaian</span>
+                        <span className="text-[10px] font-mono text-slate-400 font-normal">
+                          ({dresscodeCount}/{groupedItems.dresscode.length})
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleCheckCategory("dresscode")}
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border transition-all flex items-center gap-1 ${
+                          isDresscodeComplete
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                            : "bg-slate-50 text-slate-600 hover:bg-slate-100 border-slate-200"
+                        }`}
+                      >
+                        <Check className="h-2.5 w-2.5 stroke-[3]" />
+                        <span>{isDresscodeComplete ? "Batal" : "Centang Dresscode"}</span>
+                      </button>
                     </div>
-                    <div className="space-y-1">
+                    <div className="space-y-1.5">
                       {groupedItems.dresscode.map((item) => {
                         const isChecked = checkedItemIds.has(item.id)
                         return (
                           <div
                             key={item.id}
                             onClick={() => handleToggleItem(item.id)}
-                            className={`p-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                            className={`p-2.5 rounded-xl border transition-all cursor-pointer flex items-start justify-between gap-2.5 ${
                               isChecked
                                 ? "bg-emerald-50/70 border-emerald-200 text-slate-900"
                                 : "bg-white hover:bg-slate-50 border-slate-200 text-slate-700"
                             }`}
                           >
-                            <div className="flex items-center gap-2.5 overflow-hidden">
+                            <div className="flex items-start gap-2.5 min-w-0 flex-1">
                               <div
-                                className={`h-5 w-5 rounded-md border flex items-center justify-center transition-colors shrink-0 ${
+                                className={`h-5 w-5 rounded-md border flex items-center justify-center transition-colors shrink-0 mt-0.5 ${
                                   isChecked
                                     ? "bg-emerald-600 border-emerald-600 text-white"
                                     : "border-slate-300 bg-white"
@@ -895,13 +1037,15 @@ CREATE POLICY "Allow all for attribute_checks" ON public.attribute_checks FOR AL
                               >
                                 {isChecked && <Check className="h-3.5 w-3.5 stroke-[3]" />}
                               </div>
-                              <span className="text-xs font-semibold">{item.name}</span>
+                              <div className="min-w-0 flex-1 space-y-0.5">
+                                <span className="text-xs font-semibold leading-snug break-words block">{item.name}</span>
+                                {item.detail && (
+                                  <span className="text-[11px] text-slate-500 font-normal leading-tight break-words block">
+                                    {item.detail}
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                            {item.detail && (
-                              <span className="text-[10px] font-mono text-slate-400 shrink-0 hidden sm:inline">
-                                {item.detail}
-                              </span>
-                            )}
                           </div>
                         )
                       })}
@@ -912,26 +1056,43 @@ CREATE POLICY "Allow all for attribute_checks" ON public.attribute_checks FOR AL
                 {/* 2. Atribut Bawaan */}
                 {groupedItems.atribut.length > 0 && (
                   <div className="space-y-1.5">
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 uppercase tracking-wider">
-                      <ShoppingBag className="h-3.5 w-3.5 text-slate-500" />
-                      <span>Atribut Bawaan & Konsumsi</span>
+                    <div className="flex items-center justify-between text-xs pb-0.5">
+                      <div className="flex items-center gap-1.5 font-bold text-slate-700 uppercase tracking-wider">
+                        <ShoppingBag className="h-3.5 w-3.5 text-slate-500" />
+                        <span>Atribut Bawaan & Konsumsi</span>
+                        <span className="text-[10px] font-mono text-slate-400 font-normal">
+                          ({atributCount}/{groupedItems.atribut.length})
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleCheckCategory("atribut")}
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border transition-all flex items-center gap-1 ${
+                          isAtributComplete
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                            : "bg-slate-50 text-slate-600 hover:bg-slate-100 border-slate-200"
+                        }`}
+                      >
+                        <Check className="h-2.5 w-2.5 stroke-[3]" />
+                        <span>{isAtributComplete ? "Batal" : "Centang Atribut"}</span>
+                      </button>
                     </div>
-                    <div className="space-y-1">
+                    <div className="space-y-1.5">
                       {groupedItems.atribut.map((item) => {
                         const isChecked = checkedItemIds.has(item.id)
                         return (
                           <div
                             key={item.id}
                             onClick={() => handleToggleItem(item.id)}
-                            className={`p-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                            className={`p-2.5 rounded-xl border transition-all cursor-pointer flex items-start justify-between gap-2.5 ${
                               isChecked
                                 ? "bg-emerald-50/70 border-emerald-200 text-slate-900"
                                 : "bg-white hover:bg-slate-50 border-slate-200 text-slate-700"
                             }`}
                           >
-                            <div className="flex items-center gap-2.5 overflow-hidden">
+                            <div className="flex items-start gap-2.5 min-w-0 flex-1">
                               <div
-                                className={`h-5 w-5 rounded-md border flex items-center justify-center transition-colors shrink-0 ${
+                                className={`h-5 w-5 rounded-md border flex items-center justify-center transition-colors shrink-0 mt-0.5 ${
                                   isChecked
                                     ? "bg-emerald-600 border-emerald-600 text-white"
                                     : "border-slate-300 bg-white"
@@ -939,13 +1100,15 @@ CREATE POLICY "Allow all for attribute_checks" ON public.attribute_checks FOR AL
                               >
                                 {isChecked && <Check className="h-3.5 w-3.5 stroke-[3]" />}
                               </div>
-                              <span className="text-xs font-semibold">{item.name}</span>
+                              <div className="min-w-0 flex-1 space-y-0.5">
+                                <span className="text-xs font-semibold leading-snug break-words block">{item.name}</span>
+                                {item.detail && (
+                                  <span className="text-[11px] text-slate-500 font-normal leading-tight break-words block">
+                                    {item.detail}
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                            {item.detail && (
-                              <span className="text-[10px] font-mono text-slate-400 shrink-0 hidden sm:inline">
-                                {item.detail}
-                              </span>
-                            )}
                           </div>
                         )
                       })}
@@ -956,26 +1119,43 @@ CREATE POLICY "Allow all for attribute_checks" ON public.attribute_checks FOR AL
                 {/* 3. Tugas Fisik */}
                 {groupedItems.tugas.length > 0 && (
                   <div className="space-y-1.5">
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 uppercase tracking-wider">
-                      <FileText className="h-3.5 w-3.5 text-slate-500" />
-                      <span>Penugasan Fisik (Kertas/Folio)</span>
+                    <div className="flex items-center justify-between text-xs pb-0.5">
+                      <div className="flex items-center gap-1.5 font-bold text-slate-700 uppercase tracking-wider">
+                        <FileText className="h-3.5 w-3.5 text-slate-500" />
+                        <span>Penugasan Fisik (Kertas/Folio)</span>
+                        <span className="text-[10px] font-mono text-slate-400 font-normal">
+                          ({tugasCount}/{groupedItems.tugas.length})
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleCheckCategory("tugas")}
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-lg border transition-all flex items-center gap-1 ${
+                          isTugasComplete
+                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                            : "bg-slate-50 text-slate-600 hover:bg-slate-100 border-slate-200"
+                        }`}
+                      >
+                        <Check className="h-2.5 w-2.5 stroke-[3]" />
+                        <span>{isTugasComplete ? "Batal" : "Centang Tugas"}</span>
+                      </button>
                     </div>
-                    <div className="space-y-1">
+                    <div className="space-y-1.5">
                       {groupedItems.tugas.map((item) => {
                         const isChecked = checkedItemIds.has(item.id)
                         return (
                           <div
                             key={item.id}
                             onClick={() => handleToggleItem(item.id)}
-                            className={`p-2.5 rounded-xl border transition-all cursor-pointer flex items-center justify-between gap-3 ${
+                            className={`p-2.5 rounded-xl border transition-all cursor-pointer flex items-start justify-between gap-2.5 ${
                               isChecked
                                 ? "bg-emerald-50/70 border-emerald-200 text-slate-900"
                                 : "bg-white hover:bg-slate-50 border-slate-200 text-slate-700"
                             }`}
                           >
-                            <div className="flex items-center gap-2.5 overflow-hidden">
+                            <div className="flex items-start gap-2.5 min-w-0 flex-1">
                               <div
-                                className={`h-5 w-5 rounded-md border flex items-center justify-center transition-colors shrink-0 ${
+                                className={`h-5 w-5 rounded-md border flex items-center justify-center transition-colors shrink-0 mt-0.5 ${
                                   isChecked
                                     ? "bg-emerald-600 border-emerald-600 text-white"
                                     : "border-slate-300 bg-white"
@@ -983,13 +1163,15 @@ CREATE POLICY "Allow all for attribute_checks" ON public.attribute_checks FOR AL
                               >
                                 {isChecked && <Check className="h-3.5 w-3.5 stroke-[3]" />}
                               </div>
-                              <span className="text-xs font-semibold">{item.name}</span>
+                              <div className="min-w-0 flex-1 space-y-0.5">
+                                <span className="text-xs font-semibold leading-snug break-words block">{item.name}</span>
+                                {item.detail && (
+                                  <span className="text-[11px] text-slate-500 font-normal leading-tight break-words block">
+                                    {item.detail}
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                            {item.detail && (
-                              <span className="text-[10px] font-mono text-slate-400 shrink-0 hidden sm:inline">
-                                {item.detail}
-                              </span>
-                            )}
                           </div>
                         )
                       })}
@@ -1050,29 +1232,34 @@ CREATE POLICY "Allow all for attribute_checks" ON public.attribute_checks FOR AL
       </main>
 
       {/* ================= MODAL KELOLA ATRIBUT (KHUSUS SUPERADMIN) ================= */}
-      <Dialog open={isManageModalOpen} onOpenChange={setIsManageModalOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl p-5 sm:p-6 bg-white">
-          <DialogHeader>
-            <div className="flex items-center justify-between">
-              <DialogTitle className="text-lg font-black text-slate-900">
-                Kelola Daftar Atribut (Superadmin)
-              </DialogTitle>
-            </div>
-            <DialogDescription className="text-xs text-slate-500">
-              Ubah, tambah, atau hapus daftar atribut peserta per hari. Perubahan langsung aktif di meja Sekdis.
-            </DialogDescription>
-          </DialogHeader>
+      <Dialog open={isManageModalOpen} onOpenChange={(open) => {
+        setIsManageModalOpen(open)
+        if (!open) handleCancelEdit()
+      }}>
+        <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] flex flex-col rounded-3xl p-5 sm:p-6 bg-white overflow-hidden shadow-2xl">
+          <DialogHeader className="shrink-0 space-y-2 pb-2 border-b border-slate-100">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+              <div>
+                <DialogTitle className="text-lg font-black text-slate-900 flex items-center gap-2">
+                  <SlidersHorizontal className="h-5 w-5 text-slate-700" />
+                  <span>Kelola Daftar Atribut (Superadmin)</span>
+                </DialogTitle>
+                <DialogDescription className="text-xs text-slate-500 mt-0.5">
+                  Ubah, tambah, atau hapus daftar atribut peserta per hari. Perubahan langsung aktif di meja Sekdis.
+                </DialogDescription>
+              </div>
 
-          <div className="space-y-4 pt-2">
-            {/* Tab Pilihan Sesi */}
-            <div className="flex items-center justify-between bg-slate-100 p-1 rounded-xl">
-              <div className="flex items-center gap-1">
+              {/* Day Switcher & Reset Handbook */}
+              <div className="flex items-center gap-1.5 self-start sm:self-auto bg-slate-100 p-1 rounded-xl">
                 {[1, 2, 3].map((num) => (
                   <button
                     key={num}
                     type="button"
-                    onClick={() => handleManageSessionChange(num)}
-                    className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${
+                    onClick={() => {
+                      handleCancelEdit()
+                      handleManageSessionChange(num)
+                    }}
+                    className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
                       manageSession === num
                         ? "bg-white text-slate-900 shadow-2xs"
                         : "text-slate-500 hover:text-slate-900"
@@ -1082,104 +1269,341 @@ CREATE POLICY "Allow all for attribute_checks" ON public.attribute_checks FOR AL
                   </button>
                 ))}
               </div>
-
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleResetToDefault}
-                disabled={isSavingConfig}
-                className="text-[11px] font-bold text-slate-500 hover:text-red-600 h-7"
-              >
-                Reset Default Handbook
-              </Button>
             </div>
+          </DialogHeader>
 
-            {/* Form Tambah Item Baru */}
-            <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-3 space-y-2">
-              <span className="text-[10px] font-bold font-mono uppercase text-slate-500 block">
-                + Tambah Item Atribut Baru (Day {manageSession})
-              </span>
+          {/* Form Tambah / Edit Atribut */}
+          <div className="shrink-0 pt-3">
+            <div
+              className={`rounded-2xl p-3.5 space-y-2.5 transition-all border ${
+                editingItemId
+                  ? "bg-amber-50/70 border-amber-300"
+                  : "bg-slate-50 border-slate-200/80"
+              }`}
+            >
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold flex items-center gap-1.5">
+                  {editingItemId ? (
+                    <>
+                      <Pencil className="h-3.5 w-3.5 text-amber-600" />
+                      <span className="text-amber-900">Mode Edit Atribut (Day {manageSession})</span>
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-3.5 w-3.5 text-slate-500" />
+                      <span className="text-slate-700 uppercase tracking-wider font-mono text-[11px]">
+                        Tambah Item Atribut Baru (Day {manageSession})
+                      </span>
+                    </>
+                  )}
+                </span>
+                {editingItemId && (
+                  <button
+                    type="button"
+                    onClick={handleCancelEdit}
+                    className="text-[11px] font-bold text-slate-500 hover:text-slate-800 underline underline-offset-2"
+                  >
+                    Batal Edit
+                  </button>
+                )}
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
                 <div className="sm:col-span-6">
                   <Input
-                    placeholder="Nama item (contoh: Kaos Kaki Putih)..."
+                    placeholder="Nama item (contoh: Kaos Kaki Putih, Susu Ultra Milk)..."
                     value={newItemName}
                     onChange={(e) => setNewItemName(e.target.value)}
-                    className="h-8 bg-white text-xs rounded-lg"
+                    className="h-9 bg-white text-xs rounded-xl border-slate-200"
                   />
                 </div>
                 <div className="sm:col-span-3">
                   <select
                     value={newItemCategory}
                     onChange={(e) => setNewItemCategory(e.target.value as "dresscode" | "atribut" | "tugas")}
-                    className="w-full h-8 bg-white border border-slate-200 rounded-lg text-xs font-semibold px-2 text-slate-700"
+                    className="w-full h-9 bg-white border border-slate-200 rounded-xl text-xs font-semibold px-2 text-slate-700"
                   >
-                    <option value="dresscode">Dresscode</option>
-                    <option value="atribut">Atribut</option>
-                    <option value="tugas">Tugas Fisik</option>
+                    <option value="dresscode">👔 Dresscode</option>
+                    <option value="atribut">🎒 Atribut</option>
+                    <option value="tugas">📝 Tugas Fisik</option>
                   </select>
                 </div>
-                <div className="sm:col-span-3">
+                <div className="sm:col-span-3 flex items-center gap-1.5">
                   <Button
                     type="button"
                     size="sm"
                     onClick={handleAddItem}
-                    className="w-full h-8 bg-slate-900 hover:bg-black text-white text-xs font-bold rounded-lg gap-1"
+                    className={`w-full h-9 text-xs font-bold rounded-xl gap-1 shadow-2xs ${
+                      editingItemId
+                        ? "bg-amber-600 hover:bg-amber-700 text-white"
+                        : "bg-slate-900 hover:bg-black text-white"
+                    }`}
                   >
-                    <Plus className="h-3 w-3" /> Tambah
+                    {editingItemId ? (
+                      <>
+                        <Check className="h-3.5 w-3.5" />
+                        <span>Simpan Edit</span>
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="h-3.5 w-3.5" />
+                        <span>Tambah</span>
+                      </>
+                    )}
                   </Button>
+                  {editingItemId && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleCancelEdit}
+                      className="h-9 px-2.5 rounded-xl text-xs font-bold border-slate-200"
+                    >
+                      Batal
+                    </Button>
+                  )}
                 </div>
               </div>
+
               <Input
-                placeholder="Keterangan spesifikasi opsional (contoh: Lengan panjang rapi)..."
+                placeholder="Spesifikasi / detail opsional (contoh: Lengan panjang rapi, 200ml bebas rasa, warna putih, dll)..."
                 value={newItemDetail}
                 onChange={(e) => setNewItemDetail(e.target.value)}
-                className="h-7 bg-white text-[11px] rounded-lg"
+                className="h-8 bg-white text-[11px] rounded-xl border-slate-200"
               />
             </div>
+          </div>
 
-            {/* List Item Saat Ini */}
-            <div className="space-y-1.5 max-h-[300px] overflow-y-auto pr-1">
-              <span className="text-[10px] font-mono font-bold text-slate-400 block px-1">
-                Daftar Item Day {manageSession} ({manageItems.length} Item):
+          {/* List Card Atribut yang sudah ada (Grouped & Responsif) */}
+          <div className="flex-1 overflow-y-auto pr-1 my-3 space-y-4">
+            <div className="flex items-center justify-between text-xs text-slate-500 pb-1 border-b border-slate-100">
+              <span className="font-mono font-bold text-slate-700">
+                Daftar Item Day {manageSession} ({manageItems.length} Total Item)
               </span>
-
-              {manageItems.map((item, idx) => (
-                <div
-                  key={item.id || idx}
-                  className="p-2 rounded-xl bg-white border border-slate-200 flex items-center justify-between gap-2 text-xs"
-                >
-                  <div className="flex items-center gap-2 overflow-hidden">
-                    <span className="text-[9px] font-mono font-bold px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 uppercase">
-                      {item.category}
-                    </span>
-                    <span className="font-bold text-slate-800 truncate">{item.name}</span>
-                    {item.detail && (
-                      <span className="text-[10px] text-slate-400 font-mono truncate hidden sm:inline">
-                        ({item.detail})
-                      </span>
-                    )}
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => handleDeleteItem(item.id)}
-                    className="p-1 text-slate-400 hover:text-red-600 rounded transition-colors shrink-0"
-                    title="Hapus Item"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                  </button>
-                </div>
-              ))}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleResetToDefault}
+                disabled={isSavingConfig}
+                className="text-[11px] font-bold text-slate-400 hover:text-red-600 h-6 px-2"
+              >
+                Reset Default Handbook
+              </Button>
             </div>
 
-            {/* Tombol Simpan Perubahan Modal */}
-            <div className="pt-2 flex items-center justify-end gap-2 border-t border-slate-100">
+            {manageItems.length === 0 ? (
+              <div className="py-12 text-center text-slate-400 space-y-1">
+                <p className="text-xs font-bold text-slate-600">Belum ada item untuk Day {manageSession}</p>
+                <p className="text-[11px] text-slate-400">Gunakan formulir di atas atau klik Reset Default Handbook.</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* 1. Dresscode Group */}
+                {manageGrouped.dresscode.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      <Shirt className="h-3.5 w-3.5 text-sky-600" />
+                      <span>Dresscode & Pakaian</span>
+                      <span className="text-[10px] font-mono text-slate-400 font-normal">
+                        ({manageGrouped.dresscode.length})
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {manageGrouped.dresscode.map((item) => (
+                        <div
+                          key={item.id}
+                          className={`p-3 rounded-2xl border transition-all text-xs flex flex-col justify-between gap-2 ${
+                            editingItemId === item.id
+                              ? "bg-amber-50/80 border-amber-400 ring-2 ring-amber-400/20 shadow-xs"
+                              : "bg-white hover:border-slate-300 border-slate-200/80 shadow-2xs"
+                          }`}
+                        >
+                          <div className="space-y-1">
+                            <div className="flex items-start justify-between gap-2">
+                              <span className="font-bold text-slate-800 break-words leading-snug">
+                                {item.name}
+                              </span>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => handleStartEdit(item)}
+                                  className={`p-1.5 rounded-lg transition-colors ${
+                                    editingItemId === item.id
+                                      ? "bg-amber-600 text-white"
+                                      : "text-slate-400 hover:text-amber-700 hover:bg-amber-50"
+                                  }`}
+                                  title="Edit item ini"
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteItem(item.id)}
+                                  className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                  title="Hapus item ini"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                            {item.detail ? (
+                              <p className="text-[11px] text-slate-500 font-normal break-words leading-relaxed bg-slate-50 p-1.5 rounded-lg border border-slate-100">
+                                <span className="font-semibold text-slate-400 text-[10px] uppercase tracking-wider mr-1">Ket:</span>
+                                {item.detail}
+                              </p>
+                            ) : (
+                              <span className="text-[10px] text-slate-400 italic block">Tanpa catatan tambahan</span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 2. Atribut Group */}
+                {manageGrouped.atribut.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      <ShoppingBag className="h-3.5 w-3.5 text-emerald-600" />
+                      <span>Atribut Bawaan & Konsumsi</span>
+                      <span className="text-[10px] font-mono text-slate-400 font-normal">
+                        ({manageGrouped.atribut.length})
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {manageGrouped.atribut.map((item) => (
+                        <div
+                          key={item.id}
+                          className={`p-3 rounded-2xl border transition-all text-xs flex flex-col justify-between gap-2 ${
+                            editingItemId === item.id
+                              ? "bg-amber-50/80 border-amber-400 ring-2 ring-amber-400/20 shadow-xs"
+                              : "bg-white hover:border-slate-300 border-slate-200/80 shadow-2xs"
+                          }`}
+                        >
+                          <div className="space-y-1">
+                            <div className="flex items-start justify-between gap-2">
+                              <span className="font-bold text-slate-800 break-words leading-snug">
+                                {item.name}
+                              </span>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => handleStartEdit(item)}
+                                  className={`p-1.5 rounded-lg transition-colors ${
+                                    editingItemId === item.id
+                                      ? "bg-amber-600 text-white"
+                                      : "text-slate-400 hover:text-amber-700 hover:bg-amber-50"
+                                  }`}
+                                  title="Edit item ini"
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteItem(item.id)}
+                                  className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                  title="Hapus item ini"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                            {item.detail ? (
+                              <p className="text-[11px] text-slate-500 font-normal break-words leading-relaxed bg-slate-50 p-1.5 rounded-lg border border-slate-100">
+                                <span className="font-semibold text-slate-400 text-[10px] uppercase tracking-wider mr-1">Ket:</span>
+                                {item.detail}
+                              </p>
+                            ) : (
+                              <span className="text-[10px] text-slate-400 italic block">Tanpa catatan tambahan</span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* 3. Tugas Group */}
+                {manageGrouped.tugas.length > 0 && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      <FileText className="h-3.5 w-3.5 text-violet-600" />
+                      <span>Penugasan Fisik (Kertas/Folio)</span>
+                      <span className="text-[10px] font-mono text-slate-400 font-normal">
+                        ({manageGrouped.tugas.length})
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {manageGrouped.tugas.map((item) => (
+                        <div
+                          key={item.id}
+                          className={`p-3 rounded-2xl border transition-all text-xs flex flex-col justify-between gap-2 ${
+                            editingItemId === item.id
+                              ? "bg-amber-50/80 border-amber-400 ring-2 ring-amber-400/20 shadow-xs"
+                              : "bg-white hover:border-slate-300 border-slate-200/80 shadow-2xs"
+                          }`}
+                        >
+                          <div className="space-y-1">
+                            <div className="flex items-start justify-between gap-2">
+                              <span className="font-bold text-slate-800 break-words leading-snug">
+                                {item.name}
+                              </span>
+                              <div className="flex items-center gap-1 shrink-0">
+                                <button
+                                  type="button"
+                                  onClick={() => handleStartEdit(item)}
+                                  className={`p-1.5 rounded-lg transition-colors ${
+                                    editingItemId === item.id
+                                      ? "bg-amber-600 text-white"
+                                      : "text-slate-400 hover:text-amber-700 hover:bg-amber-50"
+                                  }`}
+                                  title="Edit item ini"
+                                >
+                                  <Pencil className="h-3.5 w-3.5" />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeleteItem(item.id)}
+                                  className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                  title="Hapus item ini"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                            {item.detail ? (
+                              <p className="text-[11px] text-slate-500 font-normal break-words leading-relaxed bg-slate-50 p-1.5 rounded-lg border border-slate-100">
+                                <span className="font-semibold text-slate-400 text-[10px] uppercase tracking-wider mr-1">Ket:</span>
+                                {item.detail}
+                              </p>
+                            ) : (
+                              <span className="text-[10px] text-slate-400 italic block">Tanpa catatan tambahan</span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Tombol Simpan Perubahan Modal (Footer Pinned) */}
+          <div className="shrink-0 pt-3 flex items-center justify-between gap-2 border-t border-slate-100">
+            <span className="text-[11px] font-mono text-slate-400 hidden sm:inline">
+              Day {manageSession} • {manageItems.length} Item
+            </span>
+            <div className="flex items-center gap-2 ml-auto">
               <Button
                 variant="outline"
                 size="sm"
-                onClick={() => setIsManageModalOpen(false)}
-                className="rounded-xl text-xs font-bold"
+                onClick={() => {
+                  handleCancelEdit()
+                  setIsManageModalOpen(false)
+                }}
+                className="rounded-xl text-xs font-bold border-slate-200"
               >
                 Batal
               </Button>
@@ -1187,7 +1611,7 @@ CREATE POLICY "Allow all for attribute_checks" ON public.attribute_checks FOR AL
                 size="sm"
                 onClick={handleSaveAllConfig}
                 disabled={isSavingConfig}
-                className="rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-black px-4"
+                className="rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-black px-4 shadow-2xs"
               >
                 {isSavingConfig ? "Menyimpan..." : "Simpan Perubahan Atribut"}
               </Button>
