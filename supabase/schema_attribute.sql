@@ -86,10 +86,11 @@ INSERT INTO public.attribute_items (id, session_number, name, category, detail, 
   ('d2_tumbler', 2, 'Tumbler berisi air mineral full', 'atribut', 'Berisi penuh', 9),
   ('d2_konsumsi', 2, '1pcs Roti + 1pcs Susu Ultra Milk 200ml', 'atribut', 'Susu rasa bebas', 10),
   ('d2_snack', 2, '3pcs Snack berwarna PUTIH', 'atribut', 'Kemasan dominan putih', 11),
-  ('d2_tugas_logo', 2, 'Logo HIMASI', 'tugas', 'Wajib disiapkan/dibawa', 12),
-  ('d2_tugas_materi', 2, 'Rangkuman Materi Day 1', 'tugas', 'Ditulis tangan pada kertas folio bergaris, dilengkapi Nama, NIM, Kelompok (dikumpulkan ke pendamping)', 13),
-  ('d2_tugas_aboutme', 2, 'About Me Pribadi', 'tugas', 'Diketik rapi, dilengkapi foto diri, dicetak pada kertas HVS A4', 14),
-  ('d2_tugas_teman', 2, 'Rangkuman About Me 5 Teman', 'tugas', 'Ditulis tangan pada kertas folio, ada Nama, NIM, Kelompok dari 5 teman yang ditemui', 15)
+  ('d2_notebook', 2, 'Notebook', 'atribut', 'Buku catatan / notebook', 12),
+  ('d2_tugas_logo', 2, 'Logo HIMASI', 'tugas', 'Wajib disiapkan/dibawa', 13),
+  ('d2_tugas_materi', 2, 'Rangkuman Materi Day 1', 'tugas', 'Ditulis tangan pada kertas folio bergaris, dilengkapi Nama, NIM, Kelompok (dikumpulkan ke pendamping)', 14),
+  ('d2_tugas_aboutme', 2, 'About Me Pribadi', 'tugas', 'Diketik rapi, dilengkapi foto diri, dicetak pada kertas HVS A4', 15),
+  ('d2_tugas_teman', 2, 'Rangkuman About Me 5 Teman', 'tugas', 'Ditulis tangan pada kertas folio, ada Nama, NIM, Kelompok dari 5 teman yang ditemui', 16)
 ON CONFLICT (id) DO UPDATE SET
   name = EXCLUDED.name,
   category = EXCLUDED.category,

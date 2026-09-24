@@ -196,12 +196,20 @@ export const DEFAULT_ATTRIBUTE_ITEMS: AttributeItem[] = [
     order_index: 11
   },
   {
+    id: "d2_notebook",
+    session_number: 2,
+    name: "Notebook",
+    category: "atribut",
+    detail: "Buku catatan / notebook",
+    order_index: 12
+  },
+  {
     id: "d2_tugas_logo",
     session_number: 2,
     name: "Logo HIMASI",
     category: "tugas",
     detail: "Wajib disiapkan/dibawa",
-    order_index: 12
+    order_index: 13
   },
   {
     id: "d2_tugas_materi",
@@ -209,7 +217,7 @@ export const DEFAULT_ATTRIBUTE_ITEMS: AttributeItem[] = [
     name: "Rangkuman Materi Day 1",
     category: "tugas",
     detail: "Ditulis tangan pada kertas folio bergaris, dilengkapi Nama, NIM, Kelompok (dikumpulkan ke pendamping)",
-    order_index: 13
+    order_index: 14
   },
   {
     id: "d2_tugas_aboutme",
@@ -217,7 +225,7 @@ export const DEFAULT_ATTRIBUTE_ITEMS: AttributeItem[] = [
     name: "About Me Pribadi",
     category: "tugas",
     detail: "Diketik rapi, dilengkapi foto diri, dicetak pada kertas HVS A4",
-    order_index: 14
+    order_index: 15
   },
   {
     id: "d2_tugas_teman",
@@ -225,7 +233,7 @@ export const DEFAULT_ATTRIBUTE_ITEMS: AttributeItem[] = [
     name: "Rangkuman About Me 5 Teman",
     category: "tugas",
     detail: "Ditulis tangan pada kertas folio, ada Nama, NIM, Kelompok dari 5 teman yang ditemui",
-    order_index: 15
+    order_index: 16
   },
 
   // ================= DAY 3 =================
