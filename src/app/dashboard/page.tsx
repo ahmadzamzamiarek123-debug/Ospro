@@ -6,7 +6,7 @@ import { Member, Session, User } from "@/types/database"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Search, UserCircle, Users, Award, Calendar, LogOut, ShieldCheck, Camera, QrCode, Ticket, ExternalLink, Monitor, Loader2, Shirt } from "lucide-react"
+import { Search, UserCircle, Users, Calendar, LogOut, ShieldCheck, Camera, QrCode, Ticket, ExternalLink, Monitor, Loader2, Shirt } from "lucide-react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
 import { toast } from "sonner"
@@ -122,7 +122,6 @@ export default function DashboardPage() {
     (m.kelompok && m.kelompok.toLowerCase().includes(search.toLowerCase()))
   )
 
-  const panitia = filteredMembers.filter(m => m.role === 'panitia')
   const peserta = filteredMembers.filter(m => m.role === 'peserta')
   const isAdmin = currentUserRole === 'admin'
 
@@ -184,7 +183,7 @@ export default function DashboardPage() {
 
       <section className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
         <StatCard title="Peserta" value={members.filter(m => m.role === 'peserta').length} icon={<Users className="h-4 w-4" />} color="orange" />
-        <StatCard title="Panitia" value={members.filter(m => m.role === 'panitia').length} icon={<Award className="h-4 w-4" />} color="blue" />
+        <StatCard title="Petugas" value={officers.length} icon={<ShieldCheck className="h-4 w-4" />} color="blue" />
         <StatCard 
           title="Sesi Aktif" 
           value={`Sesi ${activeSession?.session_number || 1}`} 
@@ -294,8 +293,9 @@ export default function DashboardPage() {
           <Tabs defaultValue="peserta" className="w-full">
             <div className="px-4 sm:px-6 py-3 border-b border-slate-50 flex flex-wrap items-center justify-between gap-2">
               <TabsList className="bg-slate-100 p-1 rounded-xl">
-                <TabsTrigger value="peserta" className="rounded-lg px-4 sm:px-6 h-8 text-xs font-bold data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all">Peserta</TabsTrigger>
-                <TabsTrigger value="panitia" className="rounded-lg px-4 sm:px-6 h-8 text-xs font-bold data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all">Panitia (Internal)</TabsTrigger>
+                <TabsTrigger value="peserta" className="rounded-lg px-4 sm:px-6 h-8 text-xs font-bold data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all">
+                  Peserta ({peserta.length})
+                </TabsTrigger>
                 {isAdmin && (
                   <TabsTrigger value="petugas" className="rounded-lg px-4 sm:px-6 h-8 text-xs font-bold data-[state=active]:bg-white data-[state=active]:shadow-sm transition-all">
                     Petugas ({officers.length})
@@ -312,18 +312,6 @@ export default function DashboardPage() {
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
                     {peserta.map(m => (
-                      <MemberCard key={m.id} member={m} session={activeSession} />
-                    ))}
-                  </div>
-                )}
-              </TabsContent>
-
-              <TabsContent value="panitia" className="m-0">
-                {panitia.length === 0 ? (
-                  <div className="py-20 text-center text-slate-400 text-sm font-semibold">Tidak ada panitia ditemukan</div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-                    {panitia.map(m => (
                       <MemberCard key={m.id} member={m} session={activeSession} />
                     ))}
                   </div>

@@ -7,7 +7,8 @@ import { Member, Violation, ViolationWithDetails } from "@/types/database"
 import { getMemberStatus } from "@/lib/logic"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Clock, CheckCircle2, User, AlertTriangle } from "lucide-react"
+import { ArrowLeft, Clock, CheckCircle2, User, AlertTriangle, Trash2 } from "lucide-react"
+import { toast } from "sonner"
 import Link from "next/link"
 
 export default function MemberDetailPage() {
@@ -17,6 +18,29 @@ export default function MemberDetailPage() {
   const [member, setMember] = useState<Member | null>(null)
   const [violations, setViolations] = useState<ViolationWithDetails[]>([])
   const [loading, setLoading] = useState(true)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+
+  const handleDeleteViolation = async (violationId: string, categoryLabel: string) => {
+    if (!confirm(`Hapus catatan penilaian "${categoryLabel}" ini? Tindakan ini akan mengembalikan poin peserta.`)) return
+
+    setDeletingId(violationId)
+    try {
+      const res = await fetch(`/api/violations?id=${violationId}`, {
+        method: "DELETE"
+      })
+      const data = await res.json()
+      if (data.success) {
+        toast.success(data.message || "Catatan penilaian berhasil dihapus!")
+        setViolations((prev) => prev.filter((v) => v.id !== violationId))
+      } else {
+        toast.error(data.error || "Gagal menghapus penilaian")
+      }
+    } catch {
+      toast.error("Gagal terhubung ke server")
+    } finally {
+      setDeletingId(null)
+    }
+  }
 
   useEffect(() => {
     const supabase = createClient()
@@ -130,7 +154,7 @@ export default function MemberDetailPage() {
                 </span>
               </div>
               <p className="text-xs font-mono text-slate-500">
-                {member.nim} • <span className="uppercase text-[10px] font-semibold text-slate-400">{member.role === "panitia" ? "Panitia" : "Peserta"}</span>
+                {member.nim} • <span className="uppercase text-[10px] font-semibold text-slate-400">Peserta</span>
               </p>
             </div>
 
@@ -229,9 +253,20 @@ export default function MemberDetailPage() {
                         </span>
                       </div>
 
-                      <span className="text-[10px] font-mono text-slate-400">
-                        {dateFormatted} • {timeFormatted}
-                      </span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-[10px] font-mono text-slate-400">
+                          {dateFormatted} • {timeFormatted}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteViolation(v.id, v.violation_category || v.violation_type)}
+                          disabled={deletingId === v.id}
+                          className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                          title="Hapus penilaian ini"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                     </div>
 
                     {/* Baris 2: Isi Catatan (Ramping & langsung terbaca) */}

@@ -1,7 +1,7 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Member, Session, ViolationType } from "@/types/database"
+import { useState, useEffect, useCallback } from "react"
+import { Member, Session, ViolationType, ViolationWithDetails } from "@/types/database"
 import { createClient } from "@/lib/supabase/client"
 import {
   Sheet,
@@ -14,21 +14,39 @@ import {
 import { Button } from "@/components/ui/button"
 import { toast } from "sonner"
 import { Textarea } from "@/components/ui/textarea"
-import { ChevronRight, CheckCircle2, ShieldAlert, Heart, Info, Scale } from "lucide-react"
+import { ChevronRight, CheckCircle2, ShieldAlert, Heart, Info, Scale, Trash2 } from "lucide-react"
 
-export function ViolationSheet({ member, session }: { member: Member, session: Session | null }) {
+export function ViolationSheet({ member, session, onViolationUpdated }: { member: Member, session: Session | null, onViolationUpdated?: () => void }) {
   const [open, setOpen] = useState(false)
   const [type, setType] = useState<ViolationType | null>(null)
   const [selectedSession, setSelectedSession] = useState<number>(session?.session_number || 1)
   const [notes, setNotes] = useState("")
   const [isLoading, setIsLoading] = useState(false)
+  const [existingViolations, setExistingViolations] = useState<ViolationWithDetails[]>([])
+  const [isDeletingId, setIsDeletingId] = useState<string | null>(null)
   const supabase = createClient()
+
+  const fetchExistingViolations = useCallback(async () => {
+    try {
+      const { data } = await supabase
+        .from('violations')
+        .select('*, recorded_by_user:users(name)')
+        .eq('member_id', member.id)
+        .order('created_at', { ascending: false })
+      if (data) setExistingViolations(data as ViolationWithDetails[])
+    } catch {
+      // ignore
+    }
+  }, [supabase, member.id])
 
   useEffect(() => {
     if (session?.session_number) {
       setSelectedSession(session.session_number)
     }
-  }, [session?.session_number, open])
+    if (open) {
+      fetchExistingViolations()
+    }
+  }, [session?.session_number, open, fetchExistingViolations])
 
   const resetForm = () => {
     setType(null)
@@ -47,6 +65,27 @@ export function ViolationSheet({ member, session }: { member: Member, session: S
     }
   }
 
+  const handleDeleteExisting = async (violationId: string, label: string) => {
+    if (!confirm(`Hapus penilaian "${label}" ini? Tindakan ini akan mengembalikan poin peserta.`)) return
+
+    setIsDeletingId(violationId)
+    try {
+      const res = await fetch(`/api/violations?id=${violationId}`, { method: "DELETE" })
+      const data = await res.json()
+      if (data.success) {
+        toast.success("Catatan penilaian berhasil dihapus!")
+        setExistingViolations((prev) => prev.filter((v) => v.id !== violationId))
+        if (onViolationUpdated) onViolationUpdated()
+      } else {
+        toast.error(data.error || "Gagal menghapus penilaian")
+      }
+    } catch {
+      toast.error("Gagal terhubung ke server")
+    } finally {
+      setIsDeletingId(null)
+    }
+  }
+
   const handleSubmit = async () => {
     if (!type) return
     
@@ -55,6 +94,34 @@ export function ViolationSheet({ member, session }: { member: Member, session: S
     if (!cleanNotes) {
       toast.error("Catatan kedisiplinan wajib diisi!")
       return
+    }
+
+    // 1. Cek Anti-Input Dobel: Jika catatan persis sama
+    const duplicateExact = existingViolations.find((v) => 
+      v.violation_type === type && 
+      (v.notes?.toLowerCase().trim() === cleanNotes.toLowerCase() || v.chronology?.toLowerCase().trim() === cleanNotes.toLowerCase())
+    )
+    if (duplicateExact) {
+      const dateObj = new Date(duplicateExact.created_at)
+      const timeStr = dateObj.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+      const petugas = duplicateExact.recorded_by_user?.name || "Petugas"
+      toast.error(`⚠️ Terdeteksi input dobel! Penilaian "${cleanNotes}" sudah dicatat oleh ${petugas} pada pukul ${timeStr} WIB.`)
+      return
+    }
+
+    // 2. Cek Anti-Input Dobel: Jika jenis sama dalam 10 menit terakhir
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString()
+    const recentSameCategory = existingViolations.find((v) => 
+      v.violation_type === type && v.created_at >= tenMinutesAgo
+    )
+    if (recentSameCategory) {
+      const dateObj = new Date(recentSameCategory.created_at)
+      const timeStr = dateObj.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+      const petugas = recentSameCategory.recorded_by_user?.name || "Petugas"
+      const proceed = confirm(
+        `⚠️ PERINGATAN INPUT SERUPA:\n\nPeserta ${member.name} baru saja dicatat "${getTypeLabel(type)}" oleh ${petugas} pada pukul ${timeStr} WIB dengan catatan:\n"${recentSameCategory.notes || recentSameCategory.chronology}"\n\nApakah ini penilaian BERBEDA dan BUKAN input dobel?`
+      )
+      if (!proceed) return
     }
 
     setIsLoading(true)
@@ -82,6 +149,7 @@ export function ViolationSheet({ member, session }: { member: Member, session: S
       })
       setOpen(false)
       resetForm()
+      if (onViolationUpdated) onViolationUpdated()
     } catch (error) {
       const message = error instanceof Error ? error.message : "Gagal menyimpan data"
       toast.error(message)
@@ -185,6 +253,51 @@ export function ViolationSheet({ member, session }: { member: Member, session: S
                   </Button>
                 ))}
               </div>
+
+              {/* Riwayat Penilaian Peserta Ini (Mencegah Input Dobel) */}
+              {existingViolations.length > 0 && (
+                <div className="space-y-2 pt-2 border-t border-slate-100">
+                  <div className="flex items-center justify-between text-xs font-bold text-slate-600 px-1">
+                    <span>Riwayat Penilaian Peserta ({existingViolations.length})</span>
+                    <span className="text-[10px] text-slate-400 font-normal">Cek agar tidak input dobel</span>
+                  </div>
+                  <div className="space-y-1.5 max-h-[160px] overflow-y-auto pr-1">
+                    {existingViolations.map((v) => {
+                      const dateObj = new Date(v.created_at)
+                      const timeStr = dateObj.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+                      return (
+                        <div key={v.id} className="p-2 rounded-xl border border-slate-200 bg-slate-50/70 text-xs flex items-start justify-between gap-2">
+                          <div className="space-y-0.5 min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className={`text-[10px] font-bold px-1.5 py-0.2 rounded border ${getBtnStyles(v.violation_type)}`}>
+                                {v.violation_category || v.violation_type}
+                              </span>
+                              <span className="text-[10px] font-mono text-slate-400">
+                                Sesi {v.session_number} • {timeStr} WIB
+                              </span>
+                              <span className="text-[10px] font-medium text-slate-500">
+                                oleh {v.recorded_by_user?.name || "Petugas"}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-slate-700 font-medium break-words leading-tight pl-1 border-l border-slate-300">
+                              {v.notes || v.chronology}
+                            </p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteExisting(v.id, v.violation_category || v.violation_type)}
+                            disabled={isDeletingId === v.id}
+                            className="p-1 text-slate-400 hover:text-red-600 rounded transition-colors shrink-0"
+                            title="Hapus penilaian ini"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             <div className="space-y-5">

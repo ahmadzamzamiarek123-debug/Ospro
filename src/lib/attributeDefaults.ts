@@ -118,9 +118,9 @@ export const DEFAULT_ATTRIBUTE_ITEMS: AttributeItem[] = [
   {
     id: "d2_celana",
     session_number: 2,
-    name: "Celana kain hitam",
+    name: "Bawahan hitam",
     category: "dresscode",
-    detail: "Standar non-jeans",
+    detail: "Celana kain hitam / Rok hitam panjang sopan (non-jeans)",
     order_index: 2
   },
   {
@@ -168,7 +168,7 @@ export const DEFAULT_ATTRIBUTE_ITEMS: AttributeItem[] = [
     session_number: 2,
     name: "Bulu Ayam dari DAY 1",
     category: "atribut",
-    detail: "Lanjutan dari hari pertama",
+    detail: "Lanjutan dari hari pertama (dikumpulkan saat registrasi)",
     order_index: 8
   },
   {
@@ -196,20 +196,36 @@ export const DEFAULT_ATTRIBUTE_ITEMS: AttributeItem[] = [
     order_index: 11
   },
   {
-    id: "d2_tugas_aboutme",
+    id: "d2_tugas_logo",
     session_number: 2,
-    name: "Tugas About Me (Folio)",
+    name: "Logo HIMASI",
     category: "tugas",
-    detail: "Rangkuman 5 teman + foto bersama di Folio",
+    detail: "Wajib disiapkan/dibawa",
     order_index: 12
   },
   {
     id: "d2_tugas_materi",
     session_number: 2,
-    name: "Rangkuman Materi 1 & Materi 2",
+    name: "Rangkuman Materi Day 1",
     category: "tugas",
-    detail: "Ditulis tangan rapi",
+    detail: "Ditulis tangan pada kertas folio bergaris, dilengkapi Nama, NIM, Kelompok (dikumpulkan ke pendamping)",
     order_index: 13
+  },
+  {
+    id: "d2_tugas_aboutme",
+    session_number: 2,
+    name: "About Me Pribadi",
+    category: "tugas",
+    detail: "Diketik rapi, dilengkapi foto diri, dicetak pada kertas HVS A4",
+    order_index: 14
+  },
+  {
+    id: "d2_tugas_teman",
+    session_number: 2,
+    name: "Rangkuman About Me 5 Teman",
+    category: "tugas",
+    detail: "Ditulis tangan pada kertas folio, ada Nama, NIM, Kelompok dari 5 teman yang ditemui",
+    order_index: 15
   },
 
   // ================= DAY 3 =================

@@ -1186,7 +1186,7 @@ ON CONFLICT (id) DO UPDATE SET
                     <div className="flex items-center justify-between text-xs pb-0.5">
                       <div className="flex items-center gap-1.5 font-bold text-slate-700 uppercase tracking-wider">
                         <FileText className="h-3.5 w-3.5 text-slate-500" />
-                        <span>Penugasan Fisik (Kertas/Folio)</span>
+                        <span>Penugasan Fisik (Dikumpulkan)</span>
                         <span className="text-[10px] font-mono text-slate-400 font-normal">
                           ({tugasCount}/{groupedItems.tugas.length})
                         </span>
@@ -1580,7 +1580,7 @@ ON CONFLICT (id) DO UPDATE SET
                   <div className="space-y-2">
                     <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 uppercase tracking-wider">
                       <FileText className="h-3.5 w-3.5 text-violet-600" />
-                      <span>Penugasan Fisik (Kertas/Folio)</span>
+                      <span>Penugasan Fisik (Dikumpulkan)</span>
                       <span className="text-[10px] font-mono text-slate-400 font-normal">
                         ({manageGrouped.tugas.length})
                       </span>

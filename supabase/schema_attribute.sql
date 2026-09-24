@@ -76,18 +76,20 @@ ON CONFLICT (id) DO UPDATE SET
 -- DAY 2
 INSERT INTO public.attribute_items (id, session_number, name, category, detail, order_index) VALUES
   ('d2_batik', 2, 'Baju Batik', 'dresscode', 'Batik sopan & rapi', 1),
-  ('d2_celana', 2, 'Celana kain hitam', 'dresscode', 'Standar non-jeans', 2),
+  ('d2_celana', 2, 'Bawahan hitam', 'dresscode', 'Celana kain hitam / Rok hitam panjang sopan (non-jeans)', 2),
   ('d2_pantofel', 2, 'Sepatu pantofel', 'dresscode', 'Pantofel formal', 3),
   ('d2_kaoskaki', 2, 'Kaos kaki Kanan PUTIH, Kiri HITAM', 'dresscode', 'Kanan putih, kiri hitam', 4),
   ('d2_rafia', 2, 'Tali rafia warna kelompok (ikat pinggang)', 'dresscode', 'Dijadikan ikat pinggang sesuai warna kelompok', 5),
   ('d2_hijab', 2, 'Hijab hitam', 'dresscode', 'Khusus mahasiswi', 6),
   ('d2_nametag', 2, 'Nametag bekas PKKMB USG 2026', 'atribut', 'Wajib dipakai/dibawa', 7),
-  ('d2_bulu', 2, 'Bulu Ayam dari DAY 1', 'atribut', 'Lanjutan dari hari pertama', 8),
+  ('d2_bulu', 2, 'Bulu Ayam dari DAY 1', 'atribut', 'Lanjutan dari hari pertama (dikumpulkan saat registrasi)', 8),
   ('d2_tumbler', 2, 'Tumbler berisi air mineral full', 'atribut', 'Berisi penuh', 9),
   ('d2_konsumsi', 2, '1pcs Roti + 1pcs Susu Ultra Milk 200ml', 'atribut', 'Susu rasa bebas', 10),
   ('d2_snack', 2, '3pcs Snack berwarna PUTIH', 'atribut', 'Kemasan dominan putih', 11),
-  ('d2_tugas_aboutme', 2, 'Tugas About Me (Folio)', 'tugas', 'Rangkuman 5 teman + foto bersama di Folio', 12),
-  ('d2_tugas_materi', 2, 'Rangkuman Materi 1 & Materi 2', 'tugas', 'Ditulis tangan rapi', 13)
+  ('d2_tugas_logo', 2, 'Logo HIMASI', 'tugas', 'Wajib disiapkan/dibawa', 12),
+  ('d2_tugas_materi', 2, 'Rangkuman Materi Day 1', 'tugas', 'Ditulis tangan pada kertas folio bergaris, dilengkapi Nama, NIM, Kelompok (dikumpulkan ke pendamping)', 13),
+  ('d2_tugas_aboutme', 2, 'About Me Pribadi', 'tugas', 'Diketik rapi, dilengkapi foto diri, dicetak pada kertas HVS A4', 14),
+  ('d2_tugas_teman', 2, 'Rangkuman About Me 5 Teman', 'tugas', 'Ditulis tangan pada kertas folio, ada Nama, NIM, Kelompok dari 5 teman yang ditemui', 15)
 ON CONFLICT (id) DO UPDATE SET
   name = EXCLUDED.name,
   category = EXCLUDED.category,

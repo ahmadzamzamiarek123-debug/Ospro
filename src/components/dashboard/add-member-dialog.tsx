@@ -28,8 +28,6 @@ export function AddMemberDialog({ onMemberAdded }: { onMemberAdded: () => void }
   const [name, setName] = useState("")
   const [nim, setNim] = useState("")
   const [kelompok, setKelompok] = useState("Kelompok 1")
-  const [panitiaRole, setPanitiaRole] = useState("")
-  const [role, setRole] = useState<"peserta" | "panitia">("peserta")
   const [isLoading, setIsLoading] = useState(false)
   const supabase = createClient()
 
@@ -40,15 +38,13 @@ export function AddMemberDialog({ onMemberAdded }: { onMemberAdded: () => void }
       return
     }
 
-    const finalKelompok = role === "peserta" ? (kelompok || "Kelompok 1") : (panitiaRole.trim() || "Panitia")
-
     setIsLoading(true)
     try {
       const { error } = await supabase.from("members").insert({
         name,
         nim,
-        role,
-        kelompok: finalKelompok
+        role: "peserta",
+        kelompok: kelompok || "Kelompok 1"
       })
 
       if (error) {
@@ -56,11 +52,10 @@ export function AddMemberDialog({ onMemberAdded }: { onMemberAdded: () => void }
         return
       }
 
-      toast.success(`${name} (${role === "panitia" ? finalKelompok : kelompok}) berhasil ditambahkan`)
+      toast.success(`${name} (${kelompok}) berhasil ditambahkan`)
       setOpen(false)
       setName("")
       setNim("")
-      setPanitiaRole("")
       setKelompok("Kelompok 1")
       onMemberAdded()
     } catch (err) {
@@ -81,8 +76,8 @@ export function AddMemberDialog({ onMemberAdded }: { onMemberAdded: () => void }
       </DialogTrigger>
       <DialogContent className="sm:max-w-[400px] rounded-2xl border-none shadow-lg p-5 sm:p-6">
         <DialogHeader className="pb-4">
-          <DialogTitle className="text-xl font-black">Member Baru</DialogTitle>
-          <DialogDescription className="text-xs font-medium">Input data peserta atau panitia baru.</DialogDescription>
+          <DialogTitle className="text-xl font-black">Peserta Baru</DialogTitle>
+          <DialogDescription className="text-xs font-medium">Input data peserta mahasiswa baru.</DialogDescription>
         </DialogHeader>
         
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -109,50 +104,20 @@ export function AddMemberDialog({ onMemberAdded }: { onMemberAdded: () => void }
           </div>
 
           <div className="space-y-1.5">
-            <Label htmlFor="role" className="text-xs font-bold text-slate-500 uppercase ml-1">Role</Label>
-            <Select value={role} onValueChange={(v: "peserta" | "panitia") => setRole(v)}>
+            <Label htmlFor="kelompok" className="text-xs font-bold text-slate-500 uppercase ml-1">Kelompok</Label>
+            <Select value={kelompok} onValueChange={setKelompok}>
               <SelectTrigger className="h-11 bg-slate-50 border-slate-100 rounded-xl focus:ring-primary">
-                <SelectValue placeholder="Pilih Role" />
+                <SelectValue placeholder="Pilih Kelompok" />
               </SelectTrigger>
               <SelectContent className="rounded-xl">
-                <SelectItem value="peserta">Peserta</SelectItem>
-                <SelectItem value="panitia">Panitia</SelectItem>
+                <SelectItem value="Kelompok 1">Kelompok 1</SelectItem>
+                <SelectItem value="Kelompok 2">Kelompok 2</SelectItem>
+                <SelectItem value="Kelompok 3">Kelompok 3</SelectItem>
+                <SelectItem value="Kelompok 4">Kelompok 4</SelectItem>
+                <SelectItem value="Kelompok 5">Kelompok 5</SelectItem>
               </SelectContent>
             </Select>
           </div>
-
-          {role === "peserta" && (
-            <div className="space-y-1.5 animate-in fade-in duration-200">
-              <Label htmlFor="kelompok" className="text-xs font-bold text-slate-500 uppercase ml-1">Kelompok</Label>
-              <Select value={kelompok} onValueChange={setKelompok}>
-                <SelectTrigger className="h-11 bg-slate-50 border-slate-100 rounded-xl focus:ring-primary">
-                  <SelectValue placeholder="Pilih Kelompok" />
-                </SelectTrigger>
-                <SelectContent className="rounded-xl">
-                  <SelectItem value="Kelompok 1">Kelompok 1</SelectItem>
-                  <SelectItem value="Kelompok 2">Kelompok 2</SelectItem>
-                  <SelectItem value="Kelompok 3">Kelompok 3</SelectItem>
-                  <SelectItem value="Kelompok 4">Kelompok 4</SelectItem>
-                  <SelectItem value="Kelompok 5">Kelompok 5</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          )}
-
-          {role === "panitia" && (
-            <div className="space-y-1.5 animate-in fade-in duration-200">
-              <Label htmlFor="panitia-role" className="text-xs font-bold text-slate-500 uppercase ml-1">
-                Role / Divisi Panitia
-              </Label>
-              <Input
-                id="panitia-role"
-                placeholder="Contoh: Sie Acara, Sie Konsumsi, Medis..."
-                value={panitiaRole}
-                onChange={(e) => setPanitiaRole(e.target.value)}
-                className="h-11 bg-slate-50 border-slate-100 rounded-xl focus:ring-primary transition-all text-sm"
-              />
-            </div>
-          )}
 
           <DialogFooter className="pt-2">
             <Button 
