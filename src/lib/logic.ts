@@ -1,9 +1,9 @@
 import { Violation, ViolationType } from "@/types/database";
 
 export const POINTS_MAP: Record<ViolationType, Record<number, number>> = {
-  ringan: { 1: 2, 2: 7, 3: 12, 4: 17 },
-  sedang: { 1: 5, 2: 10, 3: 15, 4: 20 },
-  berat: { 1: 10, 2: 20, 3: 30, 4: 40 },
+  ringan: { 1: 2, 2: 4, 3: 8, 4: 16 },
+  sedang: { 1: 4, 2: 8, 3: 16, 4: 32 },
+  berat: { 1: 6, 2: 12, 3: 24, 4: 48 },
   baik: { 1: 0, 2: 0, 3: 0, 4: 0 },
 };
 
