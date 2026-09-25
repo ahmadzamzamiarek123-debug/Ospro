@@ -394,30 +394,33 @@ const ABSENT_DAY2_TASKS: AttributeItem[] = [
 ]
 
 export const DAY3_PENDING_TASKS_BY_NIM: Record<string, AttributeItem[]> = {
-  // 4 Peserta yang belum hadir / belum mengumpulkan sama sekali di Day 2 (Baris Merah di Excel)
-  "26120007": ABSENT_DAY2_TASKS, // No 7: Kia Bayu Mubalek
-  "26120010": ABSENT_DAY2_TASKS, // No 10: Supriyadi A. Mustapa
-  "25120011": ABSENT_DAY2_TASKS, // No 11: Farid Syauqi Hanafi
-  "26120031": ABSENT_DAY2_TASKS, // No 31: MONIKA WANDA TABUN
+  // 4 Peserta yang belum hadir / FALSE semua 6 kolom di Day 2 (No. 07, 10, 11, 31)
+  "26120007": ABSENT_DAY2_TASKS, // No 07: Kia Bayu Mubalek (FALSE, FALSE, FALSE, FALSE, FALSE, FALSE)
+  "26120010": ABSENT_DAY2_TASKS, // No 10: Supriyadi A. Mustapa (FALSE, FALSE, FALSE, FALSE, FALSE, FALSE)
+  "25120011": ABSENT_DAY2_TASKS, // No 11: Farid Syauqi Hanafi (FALSE, FALSE, FALSE, FALSE, FALSE, FALSE)
+  "26120031": ABSENT_DAY2_TASKS, // No 31: MONIKA WANDA TABUN (FALSE, FALSE, FALSE, FALSE, FALSE, FALSE)
 
-  // 17 Peserta yang hadir di Day 2 namun masih ada kolom penugasan yang belum centang di Excel
-  "26120015": [TASK_5TEMAN()], // No 15: MOH RAHEL AL MAKKY (Kurang: 5 Teman)
-  "26120016": [TASK_5TEMAN("Catatan Day 2: Biodata temannya tidak jelas")], // No 16: Moh Rifky Okyndra (Kurang: 5 Teman)
-  "26120018": [TASK_ABOUTME, TASK_5TEMAN()], // No 18: Muhammad rafi (Kurang: About Me & 5 Teman)
-  "26120020": [TASK_ABOUTME, TASK_5TEMAN()], // No 20: Muhammad Yusuf alhamdaniyyi (Kurang: About Me & 5 Teman)
-  "26120021": [TASK_M1, TASK_M2, TASK_M3, TASK_M4], // No 21: Destiani Uleng Holo (Kurang: Materi 1, 2, 3, 4)
-  "26120025": [TASK_5TEMAN()], // No 25: Ahmad maulana hakim (Kurang: 5 Teman)
-  "26120027": [TASK_5TEMAN()], // No 27: NAUFAL AHNAF (Kurang: 5 Teman)
-  "26120028": [TASK_ABOUTME, TASK_5TEMAN()], // No 28: Bahi najmi jauhara (Kurang: About Me & 5 Teman)
-  "26120035": [TASK_M3, TASK_M4], // No 35: Muhammad Azharil Ilham (Kurang: Materi 3 & Materi 4)
-  "26120037": [TASK_5TEMAN()], // No 37: Ahmad Abdullah Mas'ud (Kurang: 5 Teman)
-  "26120038": [TASK_5TEMAN("Catatan Day 2: Baru foto 5 & rangkuman aboutme diri sendiri (kurang rangkuman 5 teman)")], // No 38: Zarah mei dwi Anggita sari (Kurang: 5 Teman)
-  "26120039": [TASK_ABOUTME, TASK_5TEMAN()], // No 39: Hendra eka Prasetyo (Kurang: About Me & 5 Teman)
-  "26120041": [TASK_5TEMAN("Catatan Day 2: Rangkuman aboutme kurang 1 teman")], // No 41: Dania Ila Faqih (Kurang: 5 Teman)
-  "26120042": [TASK_M1, TASK_M2, TASK_5TEMAN()], // No 42: Dhanial eka Yudistira (Kurang: Materi 1, Materi 2, & 5 Teman)
-  "26120043": [TASK_M1, TASK_M4, TASK_5TEMAN("Catatan Day 2: Kurang lengkap biodata temannya")], // No 43: RAFSA MAGHONI (Kurang: Materi 1, Materi 4, & 5 Teman)
-  "26120045": [TASK_5TEMAN()], // No 45: M. Nasrul Hadi Andika (Kurang: 5 Teman)
-  "26120046": [TASK_M1, TASK_M2, TASK_M3, TASK_M4, TASK_5TEMAN()] // No 46: Moch Aulia Ferdiansyah (Kurang: Materi 1, 2, 3, 4, & 5 Teman; About Me sudah centang)
+  // 20 Peserta yang hadir di Day 2 namun memiliki kolom FALSE di Excel
+  "26120004": [TASK_5TEMAN()], // No 04: Lintang Farasyah Elgi (TRUE, TRUE, TRUE, TRUE, TRUE, FALSE)
+  "26120015": [TASK_5TEMAN()], // No 15: MOH RAHEL AL MAKKY (TRUE, TRUE, TRUE, TRUE, TRUE, FALSE)
+  "26120017": [TASK_5TEMAN()], // No 17: Abdulloh Yaafi Sigit (TRUE, TRUE, TRUE, TRUE, TRUE, FALSE)
+  "26120018": [TASK_ABOUTME, TASK_5TEMAN()], // No 18: Muhammad rafi (TRUE, TRUE, TRUE, TRUE, FALSE, FALSE)
+  "26120020": [TASK_ABOUTME, TASK_5TEMAN()], // No 20: Muhammad Yusuf alhamdaniyyi (TRUE, TRUE, TRUE, TRUE, FALSE, FALSE)
+  "26120021": [TASK_M1, TASK_M2, TASK_M3, TASK_M4], // No 21: Destiani Uleng Holo (FALSE, FALSE, FALSE, FALSE, TRUE, TRUE)
+  "26120025": [TASK_5TEMAN()], // No 25: Ahmad maulana hakim (TRUE, TRUE, TRUE, TRUE, TRUE, FALSE)
+  "26120027": [TASK_5TEMAN()], // No 27: NAUFAL AHNAF (TRUE, TRUE, TRUE, TRUE, TRUE, FALSE)
+  "26120028": [TASK_ABOUTME, TASK_5TEMAN()], // No 28: Bahi najmi jauhara (TRUE, TRUE, TRUE, TRUE, FALSE, FALSE)
+  "26120029": [TASK_5TEMAN()], // No 29: PUTRI AMELIA (TRUE, TRUE, TRUE, TRUE, TRUE, FALSE)
+  "26120033": [TASK_5TEMAN()], // No 33: MASKHUN MAULANA YUSUF (TRUE, TRUE, TRUE, TRUE, TRUE, FALSE)
+  "26120034": [TASK_5TEMAN()], // No 34: NAILUL HIMMATUL FAJRIYAH (TRUE, TRUE, TRUE, TRUE, TRUE, FALSE)
+  "26120035": [TASK_M3, TASK_M4], // No 35: Muhammad Azharil Ilham (TRUE, TRUE, FALSE, FALSE, TRUE, TRUE)
+  "26120036": [TASK_5TEMAN()], // No 36: fazrullah damarul ahmad (TRUE, TRUE, TRUE, TRUE, TRUE, FALSE)
+  "26120039": [TASK_ABOUTME, TASK_5TEMAN()], // No 39: Hendra eka Prasetyo (TRUE, TRUE, TRUE, TRUE, FALSE, FALSE)
+  "26120042": [TASK_M1, TASK_M2], // No 42: Dhanial eka Yudistira (FALSE, FALSE, TRUE, TRUE, TRUE, TRUE)
+  "26120043": [TASK_M3, TASK_M4], // No 43: RAFSA MAGHONI (TRUE, TRUE, FALSE, FALSE, TRUE, TRUE)
+  "26120044": [TASK_5TEMAN()], // No 44: Ichwan Prastyo Utomo (TRUE, TRUE, TRUE, TRUE, TRUE, FALSE)
+  "26120045": [TASK_5TEMAN()], // No 45: M. Nasrul Hadi Andika (TRUE, TRUE, TRUE, TRUE, TRUE, FALSE)
+  "26120046": [TASK_M1, TASK_M2, TASK_M3, TASK_M4, TASK_5TEMAN()] // No 46: Moch Aulia Ferdiansyah (FALSE, FALSE, FALSE, FALSE, TRUE, FALSE)
 }
 
 export function getDay3PendingTasksForNim(nim?: string | null): AttributeItem[] {
