@@ -88,7 +88,7 @@ INSERT INTO public.attribute_items (id, session_number, name, category, detail, 
   ('d2_snack', 2, '3pcs Snack berwarna PUTIH', 'atribut', 'Kemasan dominan putih', 11),
   ('d2_notebook', 2, 'Notebook', 'atribut', 'Buku catatan / notebook', 12),
   ('d2_tugas_logo', 2, 'Logo HIMASI', 'tugas', 'Wajib disiapkan/dibawa', 13),
-  ('d2_tugas_materi', 2, 'Rangkuman Materi Day 1', 'tugas', 'Ditulis tangan pada kertas folio bergaris, dilengkapi Nama, NIM, Kelompok (dikumpulkan ke pendamping)', 14),
+  ('d2_tugas_materi', 2, 'Rangkuman Materi 1, 2, 3, & 4', 'tugas', 'Materi 1 (Ke-prodian), Materi 2 (HIMASI), Materi 3 (Kewarganegaraan), Materi 4 (Organisasi & Kepemimpinan)', 14),
   ('d2_tugas_aboutme', 2, 'About Me Pribadi', 'tugas', 'Diketik rapi, dilengkapi foto diri, dicetak pada kertas HVS A4', 15),
   ('d2_tugas_teman', 2, 'Rangkuman About Me 5 Teman', 'tugas', 'Ditulis tangan pada kertas folio, ada Nama, NIM, Kelompok dari 5 teman yang ditemui', 16)
 ON CONFLICT (id) DO UPDATE SET
@@ -109,10 +109,10 @@ INSERT INTO public.attribute_items (id, session_number, name, category, detail, 
   ('d3_bulu', 3, 'Bulu Ayam dari DAY 2', 'atribut', 'Lanjutan dari hari sebelumnya', 8),
   ('d3_tumbler', 3, 'Tumbler berisi air mineral full', 'atribut', 'Berisi penuh', 9),
   ('d3_konsumsi', 3, '1pcs Roti + 1pcs Susu Ultra Milk 200ml', 'atribut', 'Susu rasa bebas', 10),
-  ('d3_snack', 3, '5pcs Jajanan Tradisional (bebas)', 'atribut', 'Jajanan pasar / tradisional', 11),
-  ('d3_tugas_materi', 3, 'Rangkuman Materi 3 & Materi 4', 'tugas', 'Ditulis tangan rapi', 12)
+  ('d3_snack', 3, '5pcs Jajanan Tradisional (bebas)', 'atribut', 'Jajanan pasar / tradisional', 11)
 ON CONFLICT (id) DO UPDATE SET
   name = EXCLUDED.name,
   category = EXCLUDED.category,
   detail = EXCLUDED.detail,
   order_index = EXCLUDED.order_index;
+

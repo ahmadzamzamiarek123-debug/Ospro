@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react"
 import { createClient } from "@/lib/supabase/client"
 import { Member, User } from "@/types/database"
-import { AttributeItem, getRafiaForKelompok } from "@/lib/attributeDefaults"
+import { AttributeItem, getRafiaForKelompok, getDay3PendingTasksForNim } from "@/lib/attributeDefaults"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { 
@@ -199,9 +199,18 @@ export default function AttributeCheckPage() {
     setSelectedMember(member)
   }
 
+  // Daftar atribut efektif untuk peserta terpilih (di Day 3 ditambahkan tugas susulan spesifik peserta jika ada)
+  const effectiveAttributeItems = useMemo(() => {
+    if (sessionNumber === 3 && selectedMember) {
+      const pendingTasks = getDay3PendingTasksForNim(selectedMember.nim)
+      return [...attributeItems, ...pendingTasks]
+    }
+    return attributeItems
+  }, [attributeItems, sessionNumber, selectedMember])
+
   // Centang semua item (Fast Track)
   const handleCheckAll = () => {
-    const allIds = new Set(attributeItems.map((item) => item.id))
+    const allIds = new Set(effectiveAttributeItems.map((item) => item.id))
     setCheckedItemIds(allIds)
   }
 
@@ -229,7 +238,7 @@ export default function AttributeCheckPage() {
     setIsSubmitting(true)
 
     const checkedArray = Array.from(checkedItemIds)
-    const missingItems = attributeItems
+    const missingItems = effectiveAttributeItems
       .filter((item) => !checkedItemIds.has(item.id))
       .map((item) => item.name)
 
@@ -539,13 +548,13 @@ export default function AttributeCheckPage() {
     }
   }
 
-  // Kelompokkan item berdasarkan kategori
+  // Kelompokkan item berdasarkan kategori (menggunakan daftar efektif per peserta)
   const groupedItems = useMemo(() => {
-    const dresscode = attributeItems.filter((i) => i.category === "dresscode")
-    const atribut = attributeItems.filter((i) => i.category === "atribut")
-    const tugas = attributeItems.filter((i) => i.category === "tugas")
+    const dresscode = effectiveAttributeItems.filter((i) => i.category === "dresscode")
+    const atribut = effectiveAttributeItems.filter((i) => i.category === "atribut")
+    const tugas = effectiveAttributeItems.filter((i) => i.category === "tugas")
     return { dresscode, atribut, tugas }
-  }, [attributeItems])
+  }, [effectiveAttributeItems])
 
   // Kelompokkan item di modal kelola atribut (Superadmin)
   const manageGrouped = useMemo(() => {
@@ -584,8 +593,8 @@ export default function AttributeCheckPage() {
   const isTugasComplete = groupedItems.tugas.length > 0 && tugasCount === groupedItems.tugas.length
 
   // Hitung jumlah item terpilih
-  const totalItemCount = attributeItems.length
-  const checkedCount = attributeItems.filter((i) => checkedItemIds.has(i.id)).length
+  const totalItemCount = effectiveAttributeItems.length
+  const checkedCount = effectiveAttributeItems.filter((i) => checkedItemIds.has(i.id)).length
   const isAllChecked = totalItemCount > 0 && checkedCount === totalItemCount
   const rafiaInfo = getRafiaForKelompok(selectedMember?.kelompok)
 
@@ -847,6 +856,7 @@ ON CONFLICT (id) DO UPDATE SET
               filteredMembers.map((m) => {
                 const check = checks[m.id]
                 const isSelected = selectedMember?.id === m.id
+                const day3PendingCount = sessionNumber === 3 ? getDay3PendingTasksForNim(m.nim).length : 0
 
                 return (
                   <div
@@ -863,7 +873,7 @@ ON CONFLICT (id) DO UPDATE SET
                     }`}
                   >
                     <div className="overflow-hidden space-y-0.5">
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="font-bold text-xs truncate">{m.name}</span>
                         {m.kelompok && (
                           <span
@@ -872,6 +882,18 @@ ON CONFLICT (id) DO UPDATE SET
                             }`}
                           >
                             {m.kelompok}
+                          </span>
+                        )}
+                        {day3PendingCount > 0 && (
+                          <span
+                            className={`text-[9px] font-mono px-1.5 py-0.2 rounded font-bold shrink-0 ${
+                              isSelected
+                                ? "bg-violet-500 text-white"
+                                : "bg-violet-100 text-violet-700 border border-violet-200"
+                            }`}
+                            title={`Memiliki ${day3PendingCount} tanggungan penugasan dari Day 2`}
+                          >
+                            Susulan {day3PendingCount} Tugas
                           </span>
                         )}
                       </div>
@@ -993,6 +1015,28 @@ ON CONFLICT (id) DO UPDATE SET
                       {sessionNumber === 2 ? "(Sabuk Ikat Pinggang)" : "(Panjang 1 Meter)"}
                     </span>
                   </div>
+                )}
+
+                {/* Info Status Tanggungan Penugasan Day 2 khusus di Sesi 3 */}
+                {sessionNumber === 3 && (
+                  groupedItems.tugas.length > 0 ? (
+                    <div className="p-2.5 rounded-xl border bg-violet-50 border-violet-200 text-violet-900 flex items-center justify-between gap-2 text-xs">
+                      <div className="flex items-center gap-2 font-bold">
+                        <FileText className="h-4 w-4 text-violet-600 shrink-0" />
+                        <span>
+                          Peserta ini memiliki {groupedItems.tugas.length} tanggungan penugasan susulan/revisi dari Day 2
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-violet-200/80 text-violet-800 shrink-0">
+                        Wajib Dicek
+                      </span>
+                    </div>
+                  ) : (
+                    <div className="p-2 rounded-xl border bg-emerald-50/70 border-emerald-200 text-emerald-800 flex items-center gap-2 text-xs font-semibold">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                      <span>Penugasan Day 1 & Day 2 Tuntas — Tidak ada tanggungan penugasan di Day 3</span>
+                    </div>
+                  )
                 )}
 
                 {/* Fast Track Buttons Per Kategori & Counter */}
@@ -1215,8 +1259,12 @@ ON CONFLICT (id) DO UPDATE SET
                   <div className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs pb-0.5">
                       <div className="flex items-center gap-1.5 font-bold text-slate-700 uppercase tracking-wider">
-                        <FileText className="h-3.5 w-3.5 text-slate-500" />
-                        <span>Penugasan Fisik (Dikumpulkan)</span>
+                        <FileText className={`h-3.5 w-3.5 ${sessionNumber === 3 ? "text-violet-600" : "text-slate-500"}`} />
+                        <span>
+                          {sessionNumber === 3
+                            ? "Penugasan Susulan Day 2 (Khusus Peserta Ini)"
+                            : "Penugasan Fisik (Dikumpulkan)"}
+                        </span>
                         <span className="text-[10px] font-mono text-slate-400 font-normal">
                           ({tugasCount}/{groupedItems.tugas.length})
                         </span>
