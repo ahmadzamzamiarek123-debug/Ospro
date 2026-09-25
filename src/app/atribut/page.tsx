@@ -388,29 +388,56 @@ export default function AttributeCheckPage() {
     }
   }
 
-  const handleAddItem = () => {
+  const saveItemsToDb = async (sessionNum: number, nextItems: AttributeItem[], successMsg: string) => {
+    setIsSavingConfig(true)
+    try {
+      const res = await fetch("/api/attributes/config", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "save_all",
+          sessionNumber: sessionNum,
+          items: nextItems
+        })
+      })
+      const data = await res.json()
+      if (data.success) {
+        if (sessionNum === sessionNumber) {
+          setAttributeItems(nextItems)
+        }
+        toast.success(successMsg)
+      } else {
+        toast.error(data.error || "Gagal menyimpan ke database")
+      }
+    } catch {
+      toast.error("Gagal menyimpan perubahan ke server")
+    } finally {
+      setIsSavingConfig(false)
+    }
+  }
+
+  const handleAddItem = async () => {
     if (!newItemName.trim()) {
       toast.error("Nama atribut wajib diisi")
       return
     }
 
     if (editingItemId) {
-      setManageItems((prev) =>
-        prev.map((item) =>
-          item.id === editingItemId
-            ? {
-                ...item,
-                name: newItemName.trim(),
-                category: newItemCategory,
-                detail: newItemDetail.trim() || undefined
-              }
-            : item
-        )
+      const updatedList = manageItems.map((item) =>
+        item.id === editingItemId
+          ? {
+              ...item,
+              name: newItemName.trim(),
+              category: newItemCategory,
+              detail: newItemDetail.trim() || undefined
+            }
+          : item
       )
+      setManageItems(updatedList)
       setEditingItemId(null)
       setNewItemName("")
       setNewItemDetail("")
-      toast.success("Perubahan item berhasil diperbarui!")
+      await saveItemsToDb(manageSession, updatedList, "Perubahan atribut berhasil disimpan!")
       return
     }
 
@@ -423,10 +450,11 @@ export default function AttributeCheckPage() {
       order_index: manageItems.length + 1
     }
 
-    setManageItems((prev) => [...prev, newItem])
+    const updatedList = [...manageItems, newItem]
+    setManageItems(updatedList)
     setNewItemName("")
     setNewItemDetail("")
-    toast.success("Item ditambahkan ke daftar sementara")
+    await saveItemsToDb(manageSession, updatedList, `Atribut "${newItem.name}" berhasil ditambahkan & disimpan!`)
   }
 
   const handleStartEdit = (item: AttributeItem) => {
@@ -442,11 +470,13 @@ export default function AttributeCheckPage() {
     setNewItemDetail("")
   }
 
-  const handleDeleteItem = (id: string) => {
+  const handleDeleteItem = async (id: string) => {
     if (editingItemId === id) {
       handleCancelEdit()
     }
-    setManageItems((prev) => prev.filter((item) => item.id !== id))
+    const updatedList = manageItems.filter((item) => item.id !== id)
+    setManageItems(updatedList)
+    await saveItemsToDb(manageSession, updatedList, "Item atribut berhasil dihapus!")
   }
 
   const handleSaveAllConfig = async () => {
@@ -1287,21 +1317,21 @@ ON CONFLICT (id) DO UPDATE SET
         setIsManageModalOpen(open)
         if (!open) handleCancelEdit()
       }}>
-        <DialogContent className="max-w-4xl w-[95vw] max-h-[90vh] flex flex-col rounded-3xl p-5 sm:p-6 bg-white overflow-hidden shadow-2xl">
-          <DialogHeader className="shrink-0 space-y-2 pb-2 border-b border-slate-100">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+        <DialogContent className="w-[96vw] max-w-[96vw] sm:max-w-3xl md:max-w-4xl lg:max-w-5xl max-h-[90vh] flex flex-col rounded-2xl sm:rounded-3xl p-4 sm:p-6 bg-white overflow-hidden shadow-2xl gap-0">
+          <DialogHeader className="shrink-0 pb-3 pr-8 border-b border-slate-100">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
               <div>
-                <DialogTitle className="text-lg font-black text-slate-900 flex items-center gap-2">
-                  <SlidersHorizontal className="h-5 w-5 text-slate-700" />
+                <DialogTitle className="text-base sm:text-lg font-black text-slate-900 flex items-center gap-2">
+                  <SlidersHorizontal className="h-5 w-5 text-slate-700 shrink-0" />
                   <span>Kelola Daftar Atribut (Superadmin)</span>
                 </DialogTitle>
                 <DialogDescription className="text-xs text-slate-500 mt-0.5">
-                  Ubah, tambah, atau hapus daftar atribut peserta per hari. Perubahan langsung aktif di meja Sekdis.
+                  Ubah, tambah, atau hapus daftar atribut peserta per hari. Klik &ldquo;Simpan Perubahan Atribut&rdquo; di bagian bawah setelah selesai.
                 </DialogDescription>
               </div>
 
-              {/* Day Switcher & Reset Handbook */}
-              <div className="flex items-center gap-1.5 self-start sm:self-auto bg-slate-100 p-1 rounded-xl">
+              {/* Day Switcher */}
+              <div className="flex items-center gap-1 self-start sm:self-auto bg-slate-100 p-1 rounded-xl shrink-0">
                 {[1, 2, 3].map((num) => (
                   <button
                     key={num}
@@ -1310,9 +1340,9 @@ ON CONFLICT (id) DO UPDATE SET
                       handleCancelEdit()
                       handleManageSessionChange(num)
                     }}
-                    className={`px-3 py-1 text-xs font-bold rounded-lg transition-all ${
+                    className={`px-3.5 py-1.5 text-xs font-bold rounded-lg transition-all ${
                       manageSession === num
-                        ? "bg-white text-slate-900 shadow-2xs"
+                        ? "bg-white text-slate-900 shadow-xs"
                         : "text-slate-500 hover:text-slate-900"
                     }`}
                   >
@@ -1326,7 +1356,7 @@ ON CONFLICT (id) DO UPDATE SET
           {/* Form Tambah / Edit Atribut */}
           <div className="shrink-0 pt-3">
             <div
-              className={`rounded-2xl p-3.5 space-y-2.5 transition-all border ${
+              className={`rounded-2xl p-3.5 sm:p-4 space-y-3 transition-all border ${
                 editingItemId
                   ? "bg-amber-50/70 border-amber-300"
                   : "bg-slate-50 border-slate-200/80"
@@ -1336,12 +1366,12 @@ ON CONFLICT (id) DO UPDATE SET
                 <span className="font-bold flex items-center gap-1.5">
                   {editingItemId ? (
                     <>
-                      <Pencil className="h-3.5 w-3.5 text-amber-600" />
+                      <Pencil className="h-3.5 w-3.5 text-amber-600 shrink-0" />
                       <span className="text-amber-900">Mode Edit Atribut (Day {manageSession})</span>
                     </>
                   ) : (
                     <>
-                      <Plus className="h-3.5 w-3.5 text-slate-500" />
+                      <Plus className="h-3.5 w-3.5 text-slate-600 shrink-0" />
                       <span className="text-slate-700 uppercase tracking-wider font-mono text-[11px]">
                         Tambah Item Atribut Baru (Day {manageSession})
                       </span>
@@ -1352,39 +1382,38 @@ ON CONFLICT (id) DO UPDATE SET
                   <button
                     type="button"
                     onClick={handleCancelEdit}
-                    className="text-[11px] font-bold text-slate-500 hover:text-slate-800 underline underline-offset-2"
+                    className="text-xs font-bold text-slate-500 hover:text-slate-800 underline underline-offset-2"
                   >
                     Batal Edit
                   </button>
                 )}
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-12 gap-2">
-                <div className="sm:col-span-6">
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-2.5">
+                <div className="md:col-span-5">
                   <Input
-                    placeholder="Nama item (contoh: Kaos Kaki Putih, Susu Ultra Milk)..."
+                    placeholder="Nama item (contoh: Notebook, Susu Ultra Milk)..."
                     value={newItemName}
                     onChange={(e) => setNewItemName(e.target.value)}
-                    className="h-9 bg-white text-xs rounded-xl border-slate-200"
+                    className="h-10 bg-white text-xs sm:text-sm rounded-xl border-slate-200"
                   />
                 </div>
-                <div className="sm:col-span-3">
+                <div className="md:col-span-4">
                   <select
                     value={newItemCategory}
                     onChange={(e) => setNewItemCategory(e.target.value as "dresscode" | "atribut" | "tugas")}
-                    className="w-full h-9 bg-white border border-slate-200 rounded-xl text-xs font-semibold px-2 text-slate-700"
+                    className="w-full h-10 bg-white border border-slate-200 rounded-xl text-xs sm:text-sm font-semibold px-3 text-slate-700"
                   >
-                    <option value="dresscode">👔 Dresscode</option>
-                    <option value="atribut">🎒 Atribut</option>
-                    <option value="tugas">📝 Tugas Fisik</option>
+                    <option value="dresscode">👔 Dresscode & Pakaian</option>
+                    <option value="atribut">🎒 Atribut & Bawaan</option>
+                    <option value="tugas">📝 Penugasan Fisik (Dikumpulkan)</option>
                   </select>
                 </div>
-                <div className="sm:col-span-3 flex items-center gap-1.5">
+                <div className="md:col-span-3 flex items-center gap-2">
                   <Button
                     type="button"
-                    size="sm"
                     onClick={handleAddItem}
-                    className={`w-full h-9 text-xs font-bold rounded-xl gap-1 shadow-2xs ${
+                    className={`w-full h-10 text-xs sm:text-sm font-bold rounded-xl gap-1.5 shadow-2xs ${
                       editingItemId
                         ? "bg-amber-600 hover:bg-amber-700 text-white"
                         : "bg-slate-900 hover:bg-black text-white"
@@ -1392,13 +1421,13 @@ ON CONFLICT (id) DO UPDATE SET
                   >
                     {editingItemId ? (
                       <>
-                        <Check className="h-3.5 w-3.5" />
+                        <Check className="h-4 w-4 shrink-0" />
                         <span>Simpan Edit</span>
                       </>
                     ) : (
                       <>
-                        <Plus className="h-3.5 w-3.5" />
-                        <span>Tambah</span>
+                        <Plus className="h-4 w-4 shrink-0" />
+                        <span>Tambah ke Daftar</span>
                       </>
                     )}
                   </Button>
@@ -1406,9 +1435,8 @@ ON CONFLICT (id) DO UPDATE SET
                     <Button
                       type="button"
                       variant="outline"
-                      size="sm"
                       onClick={handleCancelEdit}
-                      className="h-9 px-2.5 rounded-xl text-xs font-bold border-slate-200"
+                      className="h-10 px-3 rounded-xl text-xs font-bold border-slate-200 shrink-0"
                     >
                       Batal
                     </Button>
@@ -1417,17 +1445,17 @@ ON CONFLICT (id) DO UPDATE SET
               </div>
 
               <Input
-                placeholder="Spesifikasi / detail opsional (contoh: Lengan panjang rapi, 200ml bebas rasa, warna putih, dll)..."
+                placeholder="Spesifikasi / keterangan opsional (contoh: Buku catatan materi, ukuran 200ml bebas rasa, ditulis tangan di kertas folio)..."
                 value={newItemDetail}
                 onChange={(e) => setNewItemDetail(e.target.value)}
-                className="h-8 bg-white text-[11px] rounded-xl border-slate-200"
+                className="h-9 bg-white text-xs rounded-xl border-slate-200"
               />
             </div>
           </div>
 
-          {/* List Card Atribut yang sudah ada (Grouped & Responsif) */}
-          <div className="flex-1 overflow-y-auto pr-1 my-3 space-y-4">
-            <div className="flex items-center justify-between text-xs text-slate-500 pb-1 border-b border-slate-100">
+          {/* List Card Atribut yang sudah ada (Grouped & Lega) */}
+          <div className="flex-1 overflow-y-auto pr-1 my-3 space-y-5 min-h-[240px]">
+            <div className="flex items-center justify-between text-xs text-slate-500 pb-2 border-b border-slate-100">
               <span className="font-mono font-bold text-slate-700">
                 Daftar Item Day {manageSession} ({manageItems.length} Total Item)
               </span>
@@ -1436,7 +1464,7 @@ ON CONFLICT (id) DO UPDATE SET
                 size="sm"
                 onClick={handleResetToDefault}
                 disabled={isSavingConfig}
-                className="text-[11px] font-bold text-slate-400 hover:text-red-600 h-6 px-2"
+                className="text-xs font-bold text-slate-400 hover:text-red-600 h-7 px-2.5"
               >
                 Reset Default Handbook
               </Button>
@@ -1444,53 +1472,54 @@ ON CONFLICT (id) DO UPDATE SET
 
             {manageItems.length === 0 ? (
               <div className="py-12 text-center text-slate-400 space-y-1">
-                <p className="text-xs font-bold text-slate-600">Belum ada item untuk Day {manageSession}</p>
-                <p className="text-[11px] text-slate-400">Gunakan formulir di atas atau klik Reset Default Handbook.</p>
+                <p className="text-sm font-bold text-slate-600">Belum ada item untuk Day {manageSession}</p>
+                <p className="text-xs text-slate-400">Gunakan formulir di atas atau klik Reset Default Handbook.</p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-5">
                 {/* 1. Dresscode Group */}
                 {manageGrouped.dresscode.length > 0 && (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 uppercase tracking-wider">
-                      <Shirt className="h-3.5 w-3.5 text-sky-600" />
+                  <div className="space-y-2.5">
+                    <div className="flex items-center gap-2 text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      <Shirt className="h-4 w-4 text-sky-600 shrink-0" />
                       <span>Dresscode & Pakaian</span>
-                      <span className="text-[10px] font-mono text-slate-400 font-normal">
+                      <span className="text-xs font-mono text-slate-400 font-normal">
                         ({manageGrouped.dresscode.length})
                       </span>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                       {manageGrouped.dresscode.map((item) => (
                         <div
                           key={item.id}
-                          className={`p-3 rounded-2xl border transition-all text-xs flex flex-col justify-between gap-2 ${
+                          className={`p-3.5 rounded-2xl border transition-all flex flex-col justify-between gap-2 ${
                             editingItemId === item.id
                               ? "bg-amber-50/80 border-amber-400 ring-2 ring-amber-400/20 shadow-xs"
                               : "bg-white hover:border-slate-300 border-slate-200/80 shadow-2xs"
                           }`}
                         >
-                          <div className="space-y-1">
-                            <div className="flex items-start justify-between gap-2">
-                              <span className="font-bold text-slate-800 break-words leading-snug">
+                          <div className="space-y-1.5">
+                            <div className="flex items-start justify-between gap-3">
+                              <span className="font-bold text-xs sm:text-sm text-slate-900 leading-snug">
                                 {item.name}
                               </span>
                               <div className="flex items-center gap-1 shrink-0">
                                 <button
                                   type="button"
                                   onClick={() => handleStartEdit(item)}
-                                  className={`p-1.5 rounded-lg transition-colors ${
+                                  className={`px-2 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 transition-colors ${
                                     editingItemId === item.id
                                       ? "bg-amber-600 text-white"
-                                      : "text-slate-400 hover:text-amber-700 hover:bg-amber-50"
+                                      : "text-slate-500 hover:text-amber-700 bg-slate-50 hover:bg-amber-50 border border-slate-200/60"
                                   }`}
                                   title="Edit item ini"
                                 >
-                                  <Pencil className="h-3.5 w-3.5" />
+                                  <Pencil className="h-3 w-3" />
+                                  <span>Edit</span>
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => handleDeleteItem(item.id)}
-                                  className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                  className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100"
                                   title="Hapus item ini"
                                 >
                                   <Trash2 className="h-3.5 w-3.5" />
@@ -1498,12 +1527,12 @@ ON CONFLICT (id) DO UPDATE SET
                               </div>
                             </div>
                             {item.detail ? (
-                              <p className="text-[11px] text-slate-500 font-normal break-words leading-relaxed bg-slate-50 p-1.5 rounded-lg border border-slate-100">
+                              <p className="text-xs text-slate-600 font-normal leading-relaxed bg-slate-50 px-2.5 py-1.5 rounded-xl border border-slate-100">
                                 <span className="font-semibold text-slate-400 text-[10px] uppercase tracking-wider mr-1">Ket:</span>
                                 {item.detail}
                               </p>
                             ) : (
-                              <span className="text-[10px] text-slate-400 italic block">Tanpa catatan tambahan</span>
+                              <span className="text-[11px] text-slate-400 italic block">Tanpa catatan tambahan</span>
                             )}
                           </div>
                         </div>
@@ -1514,46 +1543,47 @@ ON CONFLICT (id) DO UPDATE SET
 
                 {/* 2. Atribut Group */}
                 {manageGrouped.atribut.length > 0 && (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 uppercase tracking-wider">
-                      <ShoppingBag className="h-3.5 w-3.5 text-emerald-600" />
+                  <div className="space-y-2.5">
+                    <div className="flex items-center gap-2 text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      <ShoppingBag className="h-4 w-4 text-emerald-600 shrink-0" />
                       <span>Atribut Bawaan & Konsumsi</span>
-                      <span className="text-[10px] font-mono text-slate-400 font-normal">
+                      <span className="text-xs font-mono text-slate-400 font-normal">
                         ({manageGrouped.atribut.length})
                       </span>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                       {manageGrouped.atribut.map((item) => (
                         <div
                           key={item.id}
-                          className={`p-3 rounded-2xl border transition-all text-xs flex flex-col justify-between gap-2 ${
+                          className={`p-3.5 rounded-2xl border transition-all flex flex-col justify-between gap-2 ${
                             editingItemId === item.id
                               ? "bg-amber-50/80 border-amber-400 ring-2 ring-amber-400/20 shadow-xs"
                               : "bg-white hover:border-slate-300 border-slate-200/80 shadow-2xs"
                           }`}
                         >
-                          <div className="space-y-1">
-                            <div className="flex items-start justify-between gap-2">
-                              <span className="font-bold text-slate-800 break-words leading-snug">
+                          <div className="space-y-1.5">
+                            <div className="flex items-start justify-between gap-3">
+                              <span className="font-bold text-xs sm:text-sm text-slate-900 leading-snug">
                                 {item.name}
                               </span>
                               <div className="flex items-center gap-1 shrink-0">
                                 <button
                                   type="button"
                                   onClick={() => handleStartEdit(item)}
-                                  className={`p-1.5 rounded-lg transition-colors ${
+                                  className={`px-2 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 transition-colors ${
                                     editingItemId === item.id
                                       ? "bg-amber-600 text-white"
-                                      : "text-slate-400 hover:text-amber-700 hover:bg-amber-50"
+                                      : "text-slate-500 hover:text-amber-700 bg-slate-50 hover:bg-amber-50 border border-slate-200/60"
                                   }`}
                                   title="Edit item ini"
                                 >
-                                  <Pencil className="h-3.5 w-3.5" />
+                                  <Pencil className="h-3 w-3" />
+                                  <span>Edit</span>
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => handleDeleteItem(item.id)}
-                                  className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                  className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100"
                                   title="Hapus item ini"
                                 >
                                   <Trash2 className="h-3.5 w-3.5" />
@@ -1561,12 +1591,12 @@ ON CONFLICT (id) DO UPDATE SET
                               </div>
                             </div>
                             {item.detail ? (
-                              <p className="text-[11px] text-slate-500 font-normal break-words leading-relaxed bg-slate-50 p-1.5 rounded-lg border border-slate-100">
+                              <p className="text-xs text-slate-600 font-normal leading-relaxed bg-slate-50 px-2.5 py-1.5 rounded-xl border border-slate-100">
                                 <span className="font-semibold text-slate-400 text-[10px] uppercase tracking-wider mr-1">Ket:</span>
                                 {item.detail}
                               </p>
                             ) : (
-                              <span className="text-[10px] text-slate-400 italic block">Tanpa catatan tambahan</span>
+                              <span className="text-[11px] text-slate-400 italic block">Tanpa catatan tambahan</span>
                             )}
                           </div>
                         </div>
@@ -1577,46 +1607,47 @@ ON CONFLICT (id) DO UPDATE SET
 
                 {/* 3. Tugas Group */}
                 {manageGrouped.tugas.length > 0 && (
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 uppercase tracking-wider">
-                      <FileText className="h-3.5 w-3.5 text-violet-600" />
+                  <div className="space-y-2.5">
+                    <div className="flex items-center gap-2 text-xs font-bold text-slate-700 uppercase tracking-wider">
+                      <FileText className="h-4 w-4 text-violet-600 shrink-0" />
                       <span>Penugasan Fisik (Dikumpulkan)</span>
-                      <span className="text-[10px] font-mono text-slate-400 font-normal">
+                      <span className="text-xs font-mono text-slate-400 font-normal">
                         ({manageGrouped.tugas.length})
                       </span>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
                       {manageGrouped.tugas.map((item) => (
                         <div
                           key={item.id}
-                          className={`p-3 rounded-2xl border transition-all text-xs flex flex-col justify-between gap-2 ${
+                          className={`p-3.5 rounded-2xl border transition-all flex flex-col justify-between gap-2 ${
                             editingItemId === item.id
                               ? "bg-amber-50/80 border-amber-400 ring-2 ring-amber-400/20 shadow-xs"
                               : "bg-white hover:border-slate-300 border-slate-200/80 shadow-2xs"
                           }`}
                         >
-                          <div className="space-y-1">
-                            <div className="flex items-start justify-between gap-2">
-                              <span className="font-bold text-slate-800 break-words leading-snug">
+                          <div className="space-y-1.5">
+                            <div className="flex items-start justify-between gap-3">
+                              <span className="font-bold text-xs sm:text-sm text-slate-900 leading-snug">
                                 {item.name}
                               </span>
                               <div className="flex items-center gap-1 shrink-0">
                                 <button
                                   type="button"
                                   onClick={() => handleStartEdit(item)}
-                                  className={`p-1.5 rounded-lg transition-colors ${
+                                  className={`px-2 py-1 rounded-lg text-[11px] font-bold flex items-center gap-1 transition-colors ${
                                     editingItemId === item.id
                                       ? "bg-amber-600 text-white"
-                                      : "text-slate-400 hover:text-amber-700 hover:bg-amber-50"
+                                      : "text-slate-500 hover:text-amber-700 bg-slate-50 hover:bg-amber-50 border border-slate-200/60"
                                   }`}
                                   title="Edit item ini"
                                 >
-                                  <Pencil className="h-3.5 w-3.5" />
+                                  <Pencil className="h-3 w-3" />
+                                  <span>Edit</span>
                                 </button>
                                 <button
                                   type="button"
                                   onClick={() => handleDeleteItem(item.id)}
-                                  className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                  className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100"
                                   title="Hapus item ini"
                                 >
                                   <Trash2 className="h-3.5 w-3.5" />
@@ -1624,12 +1655,12 @@ ON CONFLICT (id) DO UPDATE SET
                               </div>
                             </div>
                             {item.detail ? (
-                              <p className="text-[11px] text-slate-500 font-normal break-words leading-relaxed bg-slate-50 p-1.5 rounded-lg border border-slate-100">
+                              <p className="text-xs text-slate-600 font-normal leading-relaxed bg-slate-50 px-2.5 py-1.5 rounded-xl border border-slate-100">
                                 <span className="font-semibold text-slate-400 text-[10px] uppercase tracking-wider mr-1">Ket:</span>
                                 {item.detail}
                               </p>
                             ) : (
-                              <span className="text-[10px] text-slate-400 italic block">Tanpa catatan tambahan</span>
+                              <span className="text-[11px] text-slate-400 italic block">Tanpa catatan tambahan</span>
                             )}
                           </div>
                         </div>
@@ -1643,26 +1674,24 @@ ON CONFLICT (id) DO UPDATE SET
 
           {/* Tombol Simpan Perubahan Modal (Footer Pinned) */}
           <div className="shrink-0 pt-3 flex items-center justify-between gap-2 border-t border-slate-100">
-            <span className="text-[11px] font-mono text-slate-400 hidden sm:inline">
-              Day {manageSession} • {manageItems.length} Item
+            <span className="text-xs font-mono text-slate-500 hidden sm:inline">
+              Day {manageSession} • {manageItems.length} Item Terdaftar
             </span>
-            <div className="flex items-center gap-2 ml-auto">
+            <div className="flex items-center gap-2 ml-auto w-full sm:w-auto justify-end">
               <Button
                 variant="outline"
-                size="sm"
                 onClick={() => {
                   handleCancelEdit()
                   setIsManageModalOpen(false)
                 }}
-                className="rounded-xl text-xs font-bold border-slate-200"
+                className="rounded-xl text-xs sm:text-sm font-bold border-slate-200 h-10 px-4"
               >
                 Batal
               </Button>
               <Button
-                size="sm"
                 onClick={handleSaveAllConfig}
                 disabled={isSavingConfig}
-                className="rounded-xl bg-slate-900 hover:bg-black text-white text-xs font-black px-4 shadow-2xs"
+                className="rounded-xl bg-slate-900 hover:bg-black text-white text-xs sm:text-sm font-black h-10 px-5 shadow-2xs"
               >
                 {isSavingConfig ? "Menyimpan..." : "Simpan Perubahan Atribut"}
               </Button>
