@@ -94,6 +94,16 @@ export async function POST(request: Request) {
         return NextResponse.json({ success: false, error: "Data items tidak valid" }, { status: 400 })
       }
 
+      // Bersihkan properti created_at agar PostgreSQL mengisi DEFAULT NOW() tanpa error NOT NULL
+      const cleanItems = items.map((it: Partial<AttributeItem>, idx: number) => ({
+        id: it.id || `item_${sessionNumber}_${Date.now()}_${idx}`,
+        session_number: Number(it.session_number || sessionNumber),
+        name: (it.name || "").trim(),
+        category: it.category || "atribut",
+        detail: it.detail ? it.detail.trim() : null,
+        order_index: typeof it.order_index === "number" ? it.order_index : idx + 1,
+      }))
+
       // Hapus data lama di sesi ini lalu masukkan yang baru
       const { error: delErr } = await supabase
         .from("attribute_items")
@@ -108,8 +118,8 @@ export async function POST(request: Request) {
         }, { status: 400 })
       }
 
-      if (items.length > 0) {
-        const { error: insErr } = await supabase.from("attribute_items").insert(items)
+      if (cleanItems.length > 0) {
+        const { error: insErr } = await supabase.from("attribute_items").insert(cleanItems)
         if (insErr) {
           return NextResponse.json({ success: false, error: insErr.message }, { status: 500 })
         }
@@ -118,7 +128,7 @@ export async function POST(request: Request) {
       return NextResponse.json({
         success: true,
         message: `Perubahan daftar atribut Sesi ${sessionNumber} berhasil disimpan!`,
-        items
+        items: cleanItems
       })
     }
 
