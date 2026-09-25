@@ -329,268 +329,95 @@ export const DEFAULT_ATTRIBUTE_ITEMS: AttributeItem[] = [
   }
 ]
 
-// Daftar tanggungan penugasan spesifik per peserta untuk Day 3 (berdasarkan rekap penugasan Day 2)
+// Item penugasan susulan per kolom Excel untuk Day 3
+const TASK_M1: AttributeItem = {
+  id: "d3_susulan_m1",
+  session_number: 3,
+  name: "Susulan: Rangkuman Materi 1 (Ke-Prodian)",
+  category: "tugas",
+  detail: "Tanggungan rangkuman Materi 1 (Day 1) yang belum dikumpulkan",
+  order_index: 20
+}
+
+const TASK_M2: AttributeItem = {
+  id: "d3_susulan_m2",
+  session_number: 3,
+  name: "Susulan: Rangkuman Materi 2 (HIMASI)",
+  category: "tugas",
+  detail: "Tanggungan rangkuman Materi 2 (Day 1) yang belum dikumpulkan",
+  order_index: 21
+}
+
+const TASK_M3: AttributeItem = {
+  id: "d3_susulan_m3",
+  session_number: 3,
+  name: "Susulan: Rangkuman Materi 3 (Kewarganegaraan)",
+  category: "tugas",
+  detail: "Tanggungan rangkuman Materi 3 (Day 2) yang belum dikumpulkan",
+  order_index: 22
+}
+
+const TASK_M4: AttributeItem = {
+  id: "d3_susulan_m4",
+  session_number: 3,
+  name: "Susulan: Rangkuman Materi 4 (Organisasi & Kepemimpinan)",
+  category: "tugas",
+  detail: "Tanggungan rangkuman Materi 4 (Day 2) yang belum dikumpulkan",
+  order_index: 23
+}
+
+const TASK_ABOUTME: AttributeItem = {
+  id: "d3_susulan_aboutme",
+  session_number: 3,
+  name: "Susulan: About Me Pribadi",
+  category: "tugas",
+  detail: "Diketik rapi + foto diri dicetak di kertas HVS A4 (tanggungan Day 2)",
+  order_index: 24
+}
+
+const TASK_5TEMAN = (note?: string): AttributeItem => ({
+  id: "d3_susulan_teman",
+  session_number: 3,
+  name: "Susulan: 5 Teman Foto & Rangkuman",
+  category: "tugas",
+  detail: note || "Tulis tangan di kertas folio + foto bersama 5 teman (tanggungan Day 2)",
+  order_index: 25
+})
+
 const ABSENT_DAY2_TASKS: AttributeItem[] = [
-  {
-    id: "d3_susulan_m12",
-    session_number: 3,
-    name: "Susulan: Rangkuman Materi Day 1 (Materi 1: Ke-prodian & Materi 2: HIMASI)",
-    category: "tugas",
-    detail: "Tanggungan karena belum hadir/mengumpulkan di Day 2",
-    order_index: 20
-  },
-  {
-    id: "d3_susulan_m34",
-    session_number: 3,
-    name: "Susulan: Rangkuman Materi Day 2 (Materi 3: Kewarganegaraan & Materi 4: Organisasi)",
-    category: "tugas",
-    detail: "Tanggungan karena belum hadir/mengumpulkan di Day 2",
-    order_index: 21
-  },
-  {
-    id: "d3_susulan_aboutme",
-    session_number: 3,
-    name: "Susulan: About Me Pribadi",
-    category: "tugas",
-    detail: "Diketik rapi + foto diri di HVS A4 (tanggungan Day 2)",
-    order_index: 22
-  },
-  {
-    id: "d3_susulan_teman",
-    session_number: 3,
-    name: "Susulan: Rangkuman About Me 5 Teman + Foto",
-    category: "tugas",
-    detail: "Tulis tangan di kertas folio + foto 5 teman (tanggungan Day 2)",
-    order_index: 23
-  }
+  TASK_M1,
+  TASK_M2,
+  TASK_M3,
+  TASK_M4,
+  TASK_ABOUTME,
+  TASK_5TEMAN("Tanggungan karena belum hadir/mengumpulkan di Day 2")
 ]
 
 export const DAY3_PENDING_TASKS_BY_NIM: Record<string, AttributeItem[]> = {
-  // 4 Peserta yang belum hadir / belum cek atribut di Day 2
-  "26120007": ABSENT_DAY2_TASKS, // Kia Bayu Mubalek
-  "26120010": ABSENT_DAY2_TASKS, // Supriyadi A. Mustapa
-  "25120011": ABSENT_DAY2_TASKS, // Farid Syauqi Hanafi
-  "26120031": ABSENT_DAY2_TASKS, // MONIKA WANDA TABUN
+  // 4 Peserta yang belum hadir / belum mengumpulkan sama sekali di Day 2 (Baris Merah di Excel)
+  "26120007": ABSENT_DAY2_TASKS, // No 7: Kia Bayu Mubalek
+  "26120010": ABSENT_DAY2_TASKS, // No 10: Supriyadi A. Mustapa
+  "25120011": ABSENT_DAY2_TASKS, // No 11: Farid Syauqi Hanafi
+  "26120031": ABSENT_DAY2_TASKS, // No 31: MONIKA WANDA TABUN
 
-  // 17 Peserta yang hadir di Day 2 namun memiliki tanggungan/revisi penugasan spesifik
-  "26120015": [
-    {
-      id: "d3_susulan_teman",
-      session_number: 3,
-      name: "Susulan: Rangkuman About Me 5 Teman + Foto",
-      category: "tugas",
-      detail: "Belum mengumpulkan Rangkuman 5 Teman di Day 2",
-      order_index: 20
-    }
-  ],
-  "26120016": [
-    {
-      id: "d3_susulan_teman_rev",
-      session_number: 3,
-      name: "Susulan/Revisi: Rangkuman About Me 5 Teman",
-      category: "tugas",
-      detail: "Catatan Day 2: Biodata temannya tidak jelas",
-      order_index: 20
-    }
-  ],
-  "26120018": [
-    {
-      id: "d3_susulan_aboutme",
-      session_number: 3,
-      name: "Susulan: About Me Pribadi",
-      category: "tugas",
-      detail: "Belum mengumpulkan About Me Pribadi di Day 2 (5 Teman sudah)",
-      order_index: 20
-    }
-  ],
-  "26120020": [
-    {
-      id: "d3_susulan_teman",
-      session_number: 3,
-      name: "Susulan: Rangkuman About Me 5 Teman + Foto",
-      category: "tugas",
-      detail: "Belum mengumpulkan Rangkuman 5 Teman di Day 2 (About Me Pribadi sudah)",
-      order_index: 20
-    }
-  ],
-  "26120021": [
-    {
-      id: "d3_susulan_m12",
-      session_number: 3,
-      name: "Susulan: Rangkuman Materi Day 1 (Materi 1: Ke-prodian & Materi 2: HIMASI)",
-      category: "tugas",
-      detail: "Belum mengumpulkan Rangkuman Materi 1 & 2 di Day 2",
-      order_index: 20
-    },
-    {
-      id: "d3_susulan_m34",
-      session_number: 3,
-      name: "Susulan: Rangkuman Materi Day 2 (Materi 3: Kewarganegaraan & Materi 4: Organisasi)",
-      category: "tugas",
-      detail: "Belum mengumpulkan Rangkuman Materi 3 & 4 di Day 2",
-      order_index: 21
-    }
-  ],
-  "26120025": [
-    {
-      id: "d3_susulan_teman",
-      session_number: 3,
-      name: "Susulan: Rangkuman About Me 5 Teman + Foto",
-      category: "tugas",
-      detail: "Belum mengumpulkan Rangkuman 5 Teman di Day 2",
-      order_index: 20
-    }
-  ],
-  "26120027": [
-    {
-      id: "d3_susulan_teman",
-      session_number: 3,
-      name: "Susulan: Rangkuman About Me 5 Teman + Foto",
-      category: "tugas",
-      detail: "Belum mengumpulkan Rangkuman 5 Teman di Day 2",
-      order_index: 20
-    }
-  ],
-  "26120028": [
-    {
-      id: "d3_susulan_aboutme",
-      session_number: 3,
-      name: "Susulan: About Me Pribadi",
-      category: "tugas",
-      detail: "Belum mengumpulkan About Me Pribadi di Day 2",
-      order_index: 20
-    },
-    {
-      id: "d3_susulan_teman",
-      session_number: 3,
-      name: "Susulan: Rangkuman About Me 5 Teman + Foto",
-      category: "tugas",
-      detail: "Belum mengumpulkan Rangkuman 5 Teman di Day 2",
-      order_index: 21
-    }
-  ],
-  "26120035": [
-    {
-      id: "d3_susulan_m34",
-      session_number: 3,
-      name: "Susulan: Rangkuman Materi Day 2 (Materi 3: Kewarganegaraan & Materi 4: Organisasi)",
-      category: "tugas",
-      detail: "Materi 1 & 2 sudah lengkap, kurang Materi 3 & Materi 4",
-      order_index: 20
-    }
-  ],
-  "26120037": [
-    {
-      id: "d3_susulan_teman",
-      session_number: 3,
-      name: "Susulan: Rangkuman About Me 5 Teman + Foto",
-      category: "tugas",
-      detail: "Belum mengumpulkan Rangkuman 5 Teman di Day 2",
-      order_index: 20
-    }
-  ],
-  "26120038": [
-    {
-      id: "d3_susulan_teman_rev",
-      session_number: 3,
-      name: "Susulan/Revisi: Rangkuman About Me 5 Teman",
-      category: "tugas",
-      detail: "Catatan Day 2: Baru foto 5 & rangkuman aboutme diri sendiri (kurang rangkuman 5 teman)",
-      order_index: 20
-    }
-  ],
-  "26120039": [
-    {
-      id: "d3_susulan_aboutme",
-      session_number: 3,
-      name: "Susulan: About Me Pribadi",
-      category: "tugas",
-      detail: "Belum mengumpulkan About Me Pribadi di Day 2",
-      order_index: 20
-    },
-    {
-      id: "d3_susulan_teman",
-      session_number: 3,
-      name: "Susulan: Rangkuman About Me 5 Teman + Foto",
-      category: "tugas",
-      detail: "Belum mengumpulkan Rangkuman 5 Teman di Day 2",
-      order_index: 21
-    }
-  ],
-  "26120041": [
-    {
-      id: "d3_susulan_teman_rev",
-      session_number: 3,
-      name: "Susulan/Revisi: Rangkuman About Me 5 Teman (Kurang 1 Teman)",
-      category: "tugas",
-      detail: "Catatan Day 2: Rangkuman aboutme kurang 1 teman",
-      order_index: 20
-    }
-  ],
-  "26120042": [
-    {
-      id: "d3_susulan_m12",
-      session_number: 3,
-      name: "Susulan: Rangkuman Materi Day 1 (Materi 1: Ke-prodian & Materi 2: HIMASI)",
-      category: "tugas",
-      detail: "Materi 3 & 4 sudah lengkap, kurang Materi 1 (Ke-prodian) & Materi 2 (HIMASI)",
-      order_index: 20
-    }
-  ],
-  "26120043": [
-    {
-      id: "d3_susulan_m14",
-      session_number: 3,
-      name: "Susulan: Rangkuman Materi 1 (Ke-prodian) & Materi 4 (Organisasi & Kepemimpinan)",
-      category: "tugas",
-      detail: "Materi 2 & 3 sudah lengkap, kurang Materi 1 & Materi 4",
-      order_index: 20
-    },
-    {
-      id: "d3_susulan_teman_rev",
-      session_number: 3,
-      name: "Susulan/Revisi: Rangkuman About Me 5 Teman",
-      category: "tugas",
-      detail: "Catatan Day 2: Kurang lengkap biodata temannya",
-      order_index: 21
-    }
-  ],
-  "26120045": [
-    {
-      id: "d3_susulan_teman",
-      session_number: 3,
-      name: "Susulan: Rangkuman About Me 5 Teman + Foto",
-      category: "tugas",
-      detail: "Belum mengumpulkan Rangkuman 5 Teman di Day 2",
-      order_index: 20
-    }
-  ],
-  "26120046": [
-    {
-      id: "d3_susulan_m12",
-      session_number: 3,
-      name: "Susulan: Rangkuman Materi Day 1 (Materi 1: Ke-prodian & Materi 2: HIMASI)",
-      category: "tugas",
-      detail: "Belum mengumpulkan Rangkuman Materi 1 & 2 di Day 2",
-      order_index: 20
-    },
-    {
-      id: "d3_susulan_m34",
-      session_number: 3,
-      name: "Susulan: Rangkuman Materi Day 2 (Materi 3: Kewarganegaraan & Materi 4: Organisasi)",
-      category: "tugas",
-      detail: "Belum mengumpulkan Rangkuman Materi 3 & 4 di Day 2",
-      order_index: 21
-    },
-    {
-      id: "d3_susulan_teman",
-      session_number: 3,
-      name: "Susulan: Rangkuman About Me 5 Teman + Foto",
-      category: "tugas",
-      detail: "About Me Pribadi sudah lengkap, kurang Rangkuman 5 Teman",
-      order_index: 22
-    }
-  ]
+  // 17 Peserta yang hadir di Day 2 namun masih ada kolom penugasan yang belum centang di Excel
+  "26120015": [TASK_5TEMAN()], // No 15: MOH RAHEL AL MAKKY (Kurang: 5 Teman)
+  "26120016": [TASK_5TEMAN("Catatan Day 2: Biodata temannya tidak jelas")], // No 16: Moh Rifky Okyndra (Kurang: 5 Teman)
+  "26120018": [TASK_ABOUTME, TASK_5TEMAN()], // No 18: Muhammad rafi (Kurang: About Me & 5 Teman)
+  "26120020": [TASK_ABOUTME, TASK_5TEMAN()], // No 20: Muhammad Yusuf alhamdaniyyi (Kurang: About Me & 5 Teman)
+  "26120021": [TASK_M1, TASK_M2, TASK_M3, TASK_M4], // No 21: Destiani Uleng Holo (Kurang: Materi 1, 2, 3, 4)
+  "26120025": [TASK_5TEMAN()], // No 25: Ahmad maulana hakim (Kurang: 5 Teman)
+  "26120027": [TASK_5TEMAN()], // No 27: NAUFAL AHNAF (Kurang: 5 Teman)
+  "26120028": [TASK_ABOUTME, TASK_5TEMAN()], // No 28: Bahi najmi jauhara (Kurang: About Me & 5 Teman)
+  "26120035": [TASK_M3, TASK_M4], // No 35: Muhammad Azharil Ilham (Kurang: Materi 3 & Materi 4)
+  "26120037": [TASK_5TEMAN()], // No 37: Ahmad Abdullah Mas'ud (Kurang: 5 Teman)
+  "26120038": [TASK_5TEMAN("Catatan Day 2: Baru foto 5 & rangkuman aboutme diri sendiri (kurang rangkuman 5 teman)")], // No 38: Zarah mei dwi Anggita sari (Kurang: 5 Teman)
+  "26120039": [TASK_ABOUTME, TASK_5TEMAN()], // No 39: Hendra eka Prasetyo (Kurang: About Me & 5 Teman)
+  "26120041": [TASK_5TEMAN("Catatan Day 2: Rangkuman aboutme kurang 1 teman")], // No 41: Dania Ila Faqih (Kurang: 5 Teman)
+  "26120042": [TASK_M1, TASK_M2, TASK_5TEMAN()], // No 42: Dhanial eka Yudistira (Kurang: Materi 1, Materi 2, & 5 Teman)
+  "26120043": [TASK_M1, TASK_M4, TASK_5TEMAN("Catatan Day 2: Kurang lengkap biodata temannya")], // No 43: RAFSA MAGHONI (Kurang: Materi 1, Materi 4, & 5 Teman)
+  "26120045": [TASK_5TEMAN()], // No 45: M. Nasrul Hadi Andika (Kurang: 5 Teman)
+  "26120046": [TASK_M1, TASK_M2, TASK_M3, TASK_M4, TASK_5TEMAN()] // No 46: Moch Aulia Ferdiansyah (Kurang: Materi 1, 2, 3, 4, & 5 Teman; About Me sudah centang)
 }
 
 export function getDay3PendingTasksForNim(nim?: string | null): AttributeItem[] {
